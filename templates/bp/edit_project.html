@@ -1,0 +1,138 @@
+<!-- edit_project.html -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .sort-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .sort-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #fff;
+      border: 1px solid #ea5c0d;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      min-width: 150px;
+      overflow: hidden;
+    }
+    .sort-dropdown-menu div {
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #ea5c0d;
+      font-weight: bold;
+    }
+    .sort-dropdown-menu div:hover {
+      background-color: #fff4ee;
+    }
+    .rotate {
+      transform: rotate(180deg);
+      transition: transform 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+
+      {% if user_logged_in %}
+      <div class="profile-wrapper">
+        <div class="profile-btn">
+          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+            {{ first_letter }}
+          </div>
+          <span class="student-id">{{ student_id }}</span>
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </div>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Container หลัก -->
+  <div class="container">
+    <div class="upload-form-page">
+      <form method="POST" action="" class="upload-form">
+        
+        <!-- ด้านซ้าย (Preview) -->
+        <div class="left-panel">
+          <div class="pdf-preview">Preview</div>
+
+          {% if project.file_path %}
+          <div class="uploaded-file-box">
+            <i class="fa-solid fa-file-pdf pdf-icon"></i>
+            <div class="uploaded-file-name">
+              {{ project.file_path.split('/')[-1] }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- ด้านขวา (ฟอร์ม) -->
+        <div class="right-panel">
+          <label>Title</label>
+          <input type="text" name="title" value="{{ project.title_th }}" required>
+
+          <label>Alternative Title</label>
+          <input type="text" name="alt_title" value="{{ project.title_en }}">
+
+          <label>Author</label>
+          <input type="text" name="author" value="{{ project.author }}">
+
+          <label>Abstract</label>
+          <textarea name="abstract" rows="10" style="white-space: pre-wrap;">{{ project.abstract_th }}</textarea>
+
+          <label>Faculty</label>
+          <input type="text" name="faculty" value="{{ project.faculty }}">
+
+          <label>Department</label>
+          <input type="text" name="department" value="{{ project.department }}">
+
+          <label>Academic Year</label>
+          <input type="text" name="academic_year" value="{{ project.academic_year }}">
+
+          <label>Advisor</label>
+          <input type="text" name="advisor" value="{{ project.advisor }}">
+
+          <label>Keywords</label>
+          <input type="text" name="keywords" value="{{ project.keywords }}">
+
+          <!-- ปุ่มต่าง ๆ -->
+          <div class="form-buttons">
+            <a href="{{ url_for('profile') }}" class="cancel-btn">ยกเลิก</a>
+            <button type="submit" class="submit-btn">บันทึก</button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+  const textareas = document.querySelectorAll('textarea');
+  textareas.forEach(textarea => {
+    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
+  });
+  </script>
+</body>
+</html>

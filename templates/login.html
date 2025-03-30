@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .sort-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .sort-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #fff;
+      border: 1px solid #ea5c0d;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      min-width: 150px;
+      overflow: hidden;
+    }
+
+    .sort-dropdown-menu div {
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #ea5c0d;
+      font-weight: bold;
+    }
+
+    .sort-dropdown-menu div:hover {
+      background-color: #fff4ee;
+    }
+
+    .rotate {
+      transform: rotate(180deg);
+      transition: transform 0.2s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+
+      {% if user_logged_in %}
+      <div class="profile-wrapper">
+        <div class="profile-btn">
+          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+            {{ first_letter }}
+          </div>
+          <span class="student-id">{{ student_id }}</span>
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </div>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </nav>
+</body>
+
+
+<div class="login-container">
+    <div class="login-box">
+        <h2>LOG IN</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+          <label for="email">E-mail</label>
+            <input type="email" name="email" id="email" placeholder="Enter your Email..." required>
+          
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" placeholder="Enter your Password..." required>
+          
+            <button type="submit">LOG IN</button>
+          </form>
+          
+    </div>
+</div>
+

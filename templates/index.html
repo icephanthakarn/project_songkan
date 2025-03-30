@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+</head>
+<body>
+  <!-- Navbar -->
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+
+      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
+      {% if user_is_admin %}
+        <a href="{{ url_for('admin_page') }}" style="margin-right: 15px;">Admin</a>
+      {% endif %}
+
+      {% if user_logged_in %}
+      <div class="profile-wrapper">
+        <div class="profile-btn">
+          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+            {{ first_letter }}
+          </div>
+          <span class="student-id">{{ student_id }}</span>
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </div>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ค้นหา -->
+  <form method="get" action="{{ url_for('index') }}">
+    <div class="container">
+      <div class="search-container">
+        <input type="text" name="q" placeholder="ค้นหาชื่อเรื่อง,ชื่อผู้จัดทำ,คำสำคัญ ได้ที่นี่" value="{{ request.args.get('q', '') }}">
+        <button type="submit" class="search-btn">ค้นหา</button>
+      </div>
+  
+      <!-- กล่องตัวกรอง -->
+      <div class="filter-group">
+        <div class="filter-item">
+          <label>ปีการศึกษา</label>
+          <div class="select-wrapper">
+            <select name="year">
+              <option value="">ทั้งหมด</option>
+              {% for y in ['2563', '2564', '2565', '2566'] %}
+                <option value="{{ y }}" {% if request.args.get('year') == y %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+            <i class="fa-solid fa-chevron-down icon-dropdown"></i>
+          </div>
+        </div>
+  
+        <div class="filter-item">
+          <label>คณะ</label>
+          <div class="select-wrapper">
+            <select name="faculty">
+              <option value="">ทั้งหมด</option>
+              <option value="วิทยาศาสตร์" {% if request.args.get('faculty') == 'วิทยาศาสตร์' %}selected{% endif %}>วิทยาศาสตร์</option>
+            </select>
+            <i class="fa-solid fa-chevron-down icon-dropdown"></i>
+          </div>
+        </div>
+  
+        <div class="filter-item">
+          <label>สาขา</label>
+          <div class="select-wrapper">
+            <select name="department">
+              <option value="">ทั้งหมด</option>
+              {% for dept in ['ชีววิทยา', 'เคมี', 'ฟิสิกส์', 'คณิตศาสตร์ประยุกต์', 'วิทยาการคอมพิวเตอร์', 'ภาควิชาสถิติ', 'Digital Technology and Integrated Innovation (International Program)'] %}
+                <option value="{{ dept }}" {% if request.args.get('department') == dept %}selected{% endif %}>{{ dept }}</option>
+              {% endfor %}
+            </select>
+            <i class="fa-solid fa-chevron-down icon-dropdown"></i>
+          </div>
+        </div>
+  
+        <div class="reset-button-container">
+          <a href="{{ url_for('index') }}" class="reset-btn">คืนค่า</a>
+        </div>
+      </div>
+    </div>
+  </form>
+  
+    <!-- แสดงผลการค้นหา + จัดเรียง -->
+    <div class="result-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+      <span class="result-count">ผลการค้นหา {{ projects|length }} รายการ</span>
+
+      <div class="sort-dropdown-wrapper">
+        <button class="sort-btn" onclick="toggleSortMenu()">
+          จัดเรียงตาม <i class="fa-solid fa-chevron-down arrow-icon" id="sort-icon"></i>
+        </button>
+        <div class="sort-dropdown-menu" id="sortDropdown">
+          <div onclick="sortBy('name')">A-Z</div>
+          <div onclick="sortBy('name')">วันที่เพิ่มล่าสุด</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ตัวอย่างโปรเจกต์ -->
+
+    {% for project in projects %}
+      
+        <div class="project-card">
+          <div class="thumbnail">
+            {% if project.thumbnail_path %}
+              <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/default-thumbnail.png') }}" alt="No thumbnail" style="width: 150px;" />
+            {% endif %}
+          </div>
+        <div class="project-info">
+            <h3>{{ project.title }}</h3>
+            <p>ปีการศึกษา : <span class="highlight">{{ project.year }}</span></p>
+            <p>คณะ : <span class="highlight">{{ project.faculty }}</span></p>
+            <p>สาขา : <span class="highlight">{{ project.department }}</span></p>
+            <p>ชื่อผู้จัดทำ : {{ project.author }}</p>
+
+            <div class="action-buttons">
+                <a href="{{ url_for('project_detail', project_id=project.id) }}" class="detail-btn">แสดงรายละเอียด</a>
+                <a href="{{ url_for('static', filename=project.file_path|replace('\\', '/') ) }}" 
+                class="download-btn" download>
+                ดาวน์โหลดไฟล์ <i class="fa-solid fa-file-arrow-down icon"></i>
+             </a>
+            </div>
+        </div>
+        </div>
+    {% endfor %}
+
+  <!-- Script -->
+  <script>
+    function toggleSortMenu() {
+      const dropdown = document.getElementById("sortDropdown");
+      const icon = document.getElementById("sort-icon");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+      icon.classList.toggle("rotate");
+    }
+
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById("sortDropdown");
+      const button = document.querySelector('.sort-btn');
+      const icon = document.getElementById("sort-icon");
+
+      if (!button.contains(event.target)) {
+        dropdown.style.display = "none";
+        icon.classList.remove("rotate");
+      }
+    });
+
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>My App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .sort-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .sort-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #fff;
+      border: 1px solid #ea5c0d;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      min-width: 150px;
+      overflow: hidden;
+    }
+
+    .sort-dropdown-menu div {
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #ea5c0d;
+      font-weight: bold;
+    }
+
+    .sort-dropdown-menu div:hover {
+      background-color: #fff4ee;
+    }
+
+    .rotate {
+      transform: rotate(180deg);
+      transition: transform 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+
+      {% if user_logged_in %}
+      <div class="profile-wrapper">
+        <div class="profile-btn">
+          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+            {{ first_letter }}
+          </div>
+          <span class="student-id">{{ student_id }}</span>
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </div>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </nav>
+</body>
+
+<div class="container">
+    <div class="upload-form-page">
+      <form method="post" action="{{ url_for('fill_project_info') }}" enctype="multipart/form-data" class="upload-form">
+        
+        <div class="left-panel">
+          <div class="pdf-preview">Preview</div>
+          
+          {% if uploaded_filename %}
+          <div class="uploaded-file-box">
+            <i class="fa-solid fa-file-pdf pdf-icon"></i>           
+            <div class="uploaded-file-name">
+              {{ uploaded_filename }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+  
+        <div class="right-panel">
+          <label>Title</label>
+          <input type="text" name="title" value="{{ ocr_data['หัวข้อ'] if ocr_data and 'หัวข้อ' in ocr_data else '' }}" required>
+  
+          <label>Alternative Title</label>
+          <input type="text" name="alt_title">
+  
+          <label>Author</label>
+          <input type="text" name="author" value="{{ ocr_data['ชื่อนักศึกษา'] if ocr_data and ocr_data['ชื่อนักศึกษา'] else '' }}">
+  
+          <label>Abstract</label>
+          <textarea name="abstract">{{ ocr_data['บทคัดย่อ'] if ocr_data and ocr_data['บทคัดย่อ'] else '' }}</textarea>  
+
+          <label>Faculty</label>
+          <input type="text" name="faculty" value="{{ ocr_data['คณะ'] if ocr_data and ocr_data['คณะ'] else '' }}">
+  
+          <label>Department</label>
+          <input type="text" name="department" value="{{ ocr_data['ภาควิชา'] if ocr_data and ocr_data['ภาควิชา'] else '' }}">
+  
+          <label>Academic Year</label>
+          <input type="text" name="academic_year" value="{{ ocr_data['ปีการศึกษา'] if ocr_data and ocr_data['ปีการศึกษา'] else '' }}">
+  
+          <label>Advisor</label>
+          <input type="text" name="advisor" value="{{ ocr_data['อาจารย์ที่ปรึกษา'] if ocr_data and ocr_data['อาจารย์ที่ปรึกษา'] else '' }}">
+  
+          <label>Keywords</label>
+          <input type="text" name="keywords" value="{{ ocr_data['คำสำคัญ'] if ocr_data and ocr_data['คำสำคัญ'] else '' }}">
+  
+          <div class="form-buttons">
+            <a href="{{ url_for('index') }}" class="cancel-btn">ยกเลิก</a>
+            <button type="submit" class="submit-btn">ยืนยัน</button>
+          </div>
+        </div>
+  
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function autoResize(textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = (textarea.scrollHeight) + "px";
+    }
+  
+    // ทำให้ resize ตอนโหลดหน้าด้วย
+    window.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll("textarea").forEach(autoResize);
+    });
+  </script>
