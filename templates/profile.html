@@ -48,22 +48,32 @@
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
 
+      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
+      {% if user_is_admin %}
+      <div class="dropdown-menu">
+        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+      </div>
+      {% endif %}
+
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
           <div class="avatar-circle" style="background-color: {{ avatar_color }}">
             {{ first_letter }}
           </div>
-          <span class="student-id">{{ student_id }}</span>  <!-- ใช้ชื่อ field เดิมได้เลย -->
+          <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
       {% else %}
-      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
       {% endif %}
     </div>
   </nav>
@@ -87,6 +97,15 @@
         <h3>YOUR WORK</h3>
 
         {% if user_role == 'admin' %}
+                <!-- ✅ ปุ่มเพิ่มไฟล์ สำหรับ admin -->
+                <div class="upload-box">
+                  <form method="POST" action="{{ url_for('upload_project') }}" enctype="multipart/form-data" id="upload-form">
+                    <input type="file" name="pdf_file" id="real-file" hidden onchange="document.getElementById('upload-form').submit();">
+                    <span class="upload-link" onclick="document.getElementById('real-file').click();">
+                      CLICK HERE TO UPLOAD ANOTHER FILE
+                    </span>
+                  </form>
+                </div>
         {% for project in admin_projects %}
         <div class="project-card">
           {% if project.thumbnail_path %}
@@ -95,30 +114,22 @@
             </div>
           {% endif %}
           <div class="project-info">
-            <h3>{{ project.title }}</h3>
-            <p> {{ project.title_th }}</p>
+            <h3 style="font-weight: bold; color:#444444d8;">{{ project.title_th }}</h3>
+            <!--<p> {{ project.title_th }}</p>-->
             <p>ปีการศึกษา : <span class="highlight">{{ project.academic_year }}</span></p>
             <p>คณะ : <span class="highlight">{{ project.faculty }}</span></p>
             <p>สาขา : <span class="highlight">{{ project.department }}</span></p>
             <div class="action-buttons">
-              <a href="{{ url_for('project_detail', project_id=project.id) }}" class="detail-btn">แสดงรายละเอียด</a>
+              <a href="{{ url_for('edit_project', project_id=project.id) }}" class="edit-btn">แก้ไข</a>
               <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}">
-                <button type="submit" class="delete-btn">ลบ 🗑️</button>
+                <button type="submit" class="delete-btn">ลบ</button>
               </form>
             </div>
           </div>
         </div>
         {% endfor %}
     
-        <!-- ✅ ปุ่มเพิ่มไฟล์ สำหรับ admin -->
-        <div class="upload-box">
-          <form method="POST" action="{{ url_for('upload_project') }}" enctype="multipart/form-data" id="upload-form">
-            <input type="file" name="pdf_file" id="real-file" hidden onchange="document.getElementById('upload-form').submit();">
-            <span class="upload-link" onclick="document.getElementById('real-file').click();">
-              CLICK HERE TO UPLOAD ANOTHER FILE
-            </span>
-          </form>
-        </div>
+
     
       {% else %}
         {% if user_project %}

@@ -406,7 +406,7 @@ body {
     margin: 0 0 0px;
     font-size: 17px;
     font-weight: bold;
-    color: #333;
+    color: #444444d8;
   }
 
 .project-info p {
@@ -442,6 +442,7 @@ body {
     font-weight: 400;
     cursor: pointer;
     margin-top: 14px;
+    margin-right: 10px;
     text-decoration: none;
 }
 
@@ -462,6 +463,31 @@ body {
 .download-btn .icon {
   margin-left: 6px;
   font-size: 13px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 30px;
+  }
+  
+.pagination a,
+.pagination span {
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: black;
+    text-decoration: none;
+}
+  
+.pagination .current {
+    color: #E35205;
+    font-weight: bold;
+}
+  
+.pagination .dots {
+    pointer-events: none;
+    color: #888;
 }
 
 /* LOGIN PAGE */
@@ -590,7 +616,6 @@ body {
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
 }
   
-
 .delete-btn {
     background-color: white;
     color: #E35205;
@@ -600,9 +625,11 @@ body {
     font-size: 13px;
     cursor: pointer;
     font-weight: bold;
+    margin-right: 8px;
+    margin-top: 34px;
 }
 
-.detail-btn {
+.edit-btn {
     background-color: #E35205;
     color: white;
     border: none;
@@ -612,6 +639,8 @@ body {
     cursor: pointer;
     font-weight: bold;
     margin-right: 8px;
+    text-decoration: none;
+    margin-top: 34px;
 }
 
 /* upload page*/

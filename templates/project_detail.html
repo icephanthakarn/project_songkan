@@ -48,6 +48,15 @@
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
 
+      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
+      {% if user_is_admin %}
+      <div class="dropdown-menu">
+        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+      </div>
+      {% endif %}
+
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -63,7 +72,7 @@
         </div>
       </div>
       {% else %}
-      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
       {% endif %}
     </div>
   </nav>

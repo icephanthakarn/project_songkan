@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash  # <- 
 from flask_migrate import Migrate
 import random
 from pdf2image import convert_from_path
+import math
 
 
 app = Flask(__name__)
@@ -24,7 +25,16 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 
-
+def get_page_range(current_page, total_pages):
+    if total_pages <= 5:
+        return list(range(1, total_pages + 1))
+    
+    if current_page <= 3:
+        return [1, 2, 3, 4, '...', total_pages]
+    elif current_page >= total_pages - 2:
+        return [1, '...', total_pages - 3, total_pages - 2, total_pages - 1, total_pages]
+    else:
+        return [1, '...', current_page - 1, current_page, current_page + 1, '...', total_pages]
 
 # === Index page ===
 @app.route('/')
@@ -34,33 +44,50 @@ def index():
     faculty = request.args.get('faculty', '')
     department = request.args.get('department', '')
 
-    projects = ProjectModel.query
+    projects_query = ProjectModel.query
 
+    # เงื่อนไขการค้นหา
     if query:
-        projects = projects.filter(
+        projects_query = projects_query.filter(
             ProjectModel.title_th.contains(query) |
             ProjectModel.author.contains(query) |
             ProjectModel.keywords.contains(query)
         )
     if year:
-        projects = projects.filter_by(academic_year=year)
+        projects_query = projects_query.filter_by(academic_year=year)
     if faculty:
-        projects = projects.filter_by(faculty=faculty)
+        projects_query = projects_query.filter_by(faculty=faculty)
     if department:
-        if department == 'คณิตศาสตร์' or department == 'คณิตศาสตร์ประยุกต์':
-            projects = projects.filter(
+        if department in ['คณิตศาสตร์', 'คณิตศาสตร์ประยุกต์']:
+            projects_query = projects_query.filter(
                 or_(
                     ProjectModel.department == 'คณิตศาสตร์',
                     ProjectModel.department == 'คณิตศาสตร์ประยุกต์'
                 )
             )
         else:
-            projects = projects.filter_by(department=department)
+            projects_query = projects_query.filter_by(department=department)
 
-    projects = projects.all()
-    return render_template('index.html', projects=projects)
+    # แบ่งหน้า
+    page = request.args.get('page', 1, type=int)
+    per_page = 8
 
+    total_projects = projects_query.count()
+    total_pages = math.ceil(total_projects / per_page)
 
+    # get 8 ชิ้นในหน้านั้น
+    projects = projects_query.offset((page - 1) * per_page).limit(per_page).all()
+
+    # สร้าง range สำหรับ pagination
+    page_range = get_page_range(page, total_pages)
+
+    return render_template('index.html',
+                           projects=projects,
+                           total_pages=total_pages,
+                           current_page=page,
+                           page_range=page_range,
+                           total_projects=total_projects)
+                           
 # === Login ===
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -126,7 +153,7 @@ def fill_project_info():
     project = ProjectModel(
         title_th=request.form['title'],
         title_en=request.form['alt_title'],
-        author=request.form['author'],
+        author=request.form['author']or user.student_name,
         abstract_th=request.form['abstract'],
         faculty=request.form['faculty'],
         department=request.form['department'],
@@ -206,8 +233,8 @@ def profile():
         return render_template('profile.html',
                                user_name="Admin",
                                student_id="admin",
-                               faculty="วิทยาศาสตร์",
-                               department="วิทยาการคอมพิวเตอร์",
+                               faculty="admin",
+                               department="admin",
                                user_role='admin',
                                admin_projects=admin_projects)
     else:

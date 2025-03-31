@@ -16,7 +16,11 @@
 
       <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
       {% if user_is_admin %}
-        <a href="{{ url_for('admin_page') }}" style="margin-right: 15px;">Admin</a>
+      <div class="dropdown-menu">
+        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+      </div>
       {% endif %}
 
       {% if user_logged_in %}
@@ -30,6 +34,8 @@
         </div>
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
@@ -87,15 +93,16 @@
         </div>
   
         <div class="reset-button-container">
-          <a href="{{ url_for('index') }}" class="reset-btn">คืนค่า</a>
+          <a href="{{ url_for('index') }}" class="reset-btn" style="text-decoration:none;"> คืนค่า </a>
         </div>
       </div>
     </div>
   </form>
   
     <!-- แสดงผลการค้นหา + จัดเรียง -->
+  <div class="container">
     <div class="result-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-      <span class="result-count">ผลการค้นหา {{ projects|length }} รายการ</span>
+      <span class="result-count">ผลการค้นหา {{ total_projects }} รายการ</span>
 
       <div class="sort-dropdown-wrapper">
         <button class="sort-btn" onclick="toggleSortMenu()">
@@ -111,7 +118,7 @@
     <!-- ตัวอย่างโปรเจกต์ -->
 
     {% for project in projects %}
-      
+      <div class="container">      
         <div class="project-card">
           <div class="thumbnail">
             {% if project.thumbnail_path %}
@@ -121,8 +128,8 @@
             {% endif %}
           </div>
         <div class="project-info">
-            <h3>{{ project.title }}</h3>
-            <p>ปีการศึกษา : <span class="highlight">{{ project.year }}</span></p>
+          <h3>{{ project.title_th }}</h3>
+          <p>ปีการศึกษา : <span class="highlight">{{ project.academic_year }}</span></p>
             <p>คณะ : <span class="highlight">{{ project.faculty }}</span></p>
             <p>สาขา : <span class="highlight">{{ project.department }}</span></p>
             <p>ชื่อผู้จัดทำ : {{ project.author }}</p>
@@ -136,7 +143,29 @@
             </div>
         </div>
         </div>
+      </div>
     {% endfor %}
+
+    <div class="pagination">
+      {% if current_page > 1 %}
+        <a href="?page={{ current_page - 1 }}">&laquo;</a>
+      {% endif %}
+    
+      {% for p in page_range %}
+        {% if p == '...' %}
+          <span class="dots">...</span>
+        {% elif p == current_page %}
+          <span class="current">{{ p }}</span>
+        {% else %}
+          <a href="?page={{ p }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+    
+      {% if current_page < total_pages %}
+        <a href="?page={{ current_page + 1 }}">&raquo;</a>
+      {% endif %}
+    </div>
+
 
   <!-- Script -->
   <script>
