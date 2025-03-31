@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, flash
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from werkzeug.utils import secure_filename
 import os
 from models import db, ProjectModel, UserModel, PdfFileModel, KeywordModel, ProjectKeywordModel,ProjectStudentModel
@@ -46,13 +46,19 @@ def index():
 
     projects_query = ProjectModel.query
 
-    # เงื่อนไขการค้นหา
+
     if query:
-        projects_query = projects_query.filter(
-            ProjectModel.title_th.contains(query) |
-            ProjectModel.author.contains(query) |
-            ProjectModel.keywords.contains(query)
-        )
+        keywords = query.strip().split()
+        keyword_filters = []
+
+        for kw in keywords:
+            keyword_filters.append(ProjectModel.title_th.contains(kw))
+            keyword_filters.append(ProjectModel.author.contains(kw))
+            keyword_filters.append(ProjectModel.keywords.contains(kw))
+        
+ 
+        projects_query = projects_query.filter(or_(*keyword_filters))
+
     if year:
         projects_query = projects_query.filter_by(academic_year=year)
     if faculty:
