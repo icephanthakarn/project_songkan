@@ -68,7 +68,10 @@ def extract_data_with_context(text):
         'ปีการศึกษา': r'ปีการศึกษา\s*(\d+)',
         'อาจารย์ที่ปรึกษา': r'อาจารย์ที่ปรึกษา\s*(.*?)(?=\sบทคัดย่อ|$)',
         'บทคัดย่อ': r'(?:บทคัดย่อ)\s*(.*?)(?=\s(คำสำคัญ : |คำสำคัญ:)|$)',
+        'abstract_en': r'Abstract\s*(.*?)(?=\s*Keywords\s*:|$)',
         'คำสำคัญ': r'(?:คำสำคัญ : |คำสำคัญ:)\s*(.*?)(?=\sTitle|$)',
+        'keywords_en': r'(?:Keywords\s*:?)\s*(.*?)(?=\s*กิตติกรรมประกาศ|$)',
+
     }
     data = {}
     for key, pattern in patterns.items():
@@ -77,6 +80,20 @@ def extract_data_with_context(text):
             data[key] = clean_text(match.group(1))
         else:
             data[key] = 'ไม่พบข้อมูล'
+
+
+        # รวมคำสำคัญไทย + อังกฤษ
+    thai = data.get('คำสำคัญ', '')
+    eng = data.get('keywords_en', '')
+
+    combined = []
+    if thai != 'ไม่พบข้อมูล':
+        combined.append(thai)
+    if eng != 'ไม่พบข้อมูล':
+        combined.append(eng)
+
+    data['คำสำคัญ'] = ', '.join(combined)
+
     return data
 
 def process_pdf_to_data(pdf_path):
@@ -92,7 +109,7 @@ def process_pdf_to_data(pdf_path):
         return None
     
     try:
-        images = convert_from_path(pdf_path, poppler_path=poppler_path, dpi=150, first_page=4, last_page=5)
+        images = convert_from_path(pdf_path, poppler_path=poppler_path, dpi=150, first_page=4, last_page=7)
         if not images:
             print("No images found in PDF.")
             return None

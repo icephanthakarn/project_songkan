@@ -109,6 +109,9 @@
           <label>Abstract</label>
           <textarea name="abstract">{{ ocr_data['บทคัดย่อ'] if ocr_data and ocr_data['บทคัดย่อ'] else '' }}</textarea>  
 
+          <label>Abstract (EN)</label>
+          <textarea name="abstract_en">{{ ocr_data['abstract_en'] if ocr_data and ocr_data['abstract_en'] else '' }}</textarea>
+
           <label>Faculty</label>
           <input type="text" name="faculty" value="{{ ocr_data['คณะ'] if ocr_data and ocr_data['คณะ'] else '' }}">
   

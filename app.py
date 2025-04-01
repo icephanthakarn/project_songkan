@@ -161,6 +161,7 @@ def fill_project_info():
         title_en=request.form['alt_title'],
         author=request.form['author']or user.student_name,
         abstract_th=request.form['abstract'],
+        abstract_en=request.form['abstract_en'],  
         faculty=request.form['faculty'],
         department=request.form['department'],
         academic_year=request.form.get('academic_year', ''),
