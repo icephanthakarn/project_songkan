@@ -40,23 +40,85 @@
       transform: rotate(180deg);
       transition: transform 0.2s ease;
     }
+
+    .input-error {
+      border-color: red !important;
+    }
+
+    .error-message {
+      color: red;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+       
+  #replace-section {
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  #replace-section input {
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  #replace-section button {
+    padding: 6px 12px;
+    background-color: #ea5c0d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  #replace-section button:hover {
+    background-color: #d44c00;
+  }
+
+  .spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #ea5c0d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
   </style>
 </head>
 <body>
+
+  <div id="loading-spinner" class="spinner-overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
+
   <!-- Navbar -->
   <nav class="navbar">
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
-
-      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
-      {% if user_is_admin %}
-      <div class="dropdown-menu">
-        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
-        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
-      </div>
-      {% endif %}
-
+  
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -66,9 +128,14 @@
           <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
+  
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
@@ -78,6 +145,16 @@
     </div>
   </nav>
 </body>
+
+<h3>Replace Words</h3>
+<div id="replace-section">
+  <div class="replace-row">
+    <input type="text" placeholder="คำผิด" class="wrong-word" />
+    <input type="text" placeholder="คำที่ถูกต้อง" class="correct-word" />
+    <button type="button" onclick="replaceAndLog()">Replace</button>
+  </div>
+</div>
+
 
 <div class="container">
     <div class="upload-form-page">
@@ -98,35 +175,44 @@
   
         <div class="right-panel">
           <label>Title</label>
-          <input type="text" name="title" value="{{ ocr_data['หัวข้อ'] if ocr_data and 'หัวข้อ' in ocr_data else '' }}" required>
-  
+          <textarea name="title" rows="1" oninput="autoResize(this)" style="resize: none; overflow: hidden;">{{ request.form['title'] if request.form.get('title') else (ocr_data['หัวข้อ'] if ocr_data and 'หัวข้อ' in ocr_data else '') }}</textarea>
+        
           <label>Alternative Title</label>
-          <input type="text" name="alt_title">
-  
+          <textarea name="alt_title" rows="1" oninput="autoResize(this)" style="resize: none; overflow: hidden;">{{ request.form['alt_title'] if request.form.get('alt_title') else (ocr_data['title_en'] if ocr_data and ocr_data.get('title_en') else '') }}</textarea>
+        
           <label>Author</label>
-          <input type="text" name="author" value="{{ ocr_data['ชื่อนักศึกษา'] if ocr_data and ocr_data['ชื่อนักศึกษา'] else '' }}">
-  
+          <textarea name="author" oninput="autoResize(this)" style="white-space: pre-line;">{{ request.form['author'] if request.form.get('author') else (ocr_data['ชื่อนักศึกษา'] if ocr_data and ocr_data.get('ชื่อนักศึกษา') else '') }}</textarea>
+        
           <label>Abstract</label>
-          <textarea name="abstract">{{ ocr_data['บทคัดย่อ'] if ocr_data and ocr_data['บทคัดย่อ'] else '' }}</textarea>  
-
+          <textarea name="abstract" class="auto-resize">{{ request.form['abstract'] if request.form.get('abstract') else (ocr_data['บทคัดย่อ'] if ocr_data and ocr_data.get('บทคัดย่อ') else '') }}</textarea>
+        
           <label>Abstract (EN)</label>
-          <textarea name="abstract_en">{{ ocr_data['abstract_en'] if ocr_data and ocr_data['abstract_en'] else '' }}</textarea>
-
+          <textarea name="abstract_en" class="auto-resize">{{ request.form['abstract_en'] if request.form.get('abstract_en') else (ocr_data['abstract_en'] if ocr_data and ocr_data.get('abstract_en') else '') }}</textarea>
+        
           <label>Faculty</label>
-          <input type="text" name="faculty" value="{{ ocr_data['คณะ'] if ocr_data and ocr_data['คณะ'] else '' }}">
-  
+          <input type="text" name="faculty"
+                 value="{{ request.form['faculty'] if request.form.get('faculty') else (ocr_data['คณะ'] if ocr_data and ocr_data.get('คณะ') else '') }}">
+        
           <label>Department</label>
-          <input type="text" name="department" value="{{ ocr_data['ภาควิชา'] if ocr_data and ocr_data['ภาควิชา'] else '' }}">
-  
+          <input type="text" name="department"
+                 class="{% if department_error %}input-error{% endif %}"
+                 value="{{ request.form['department'] if request.form.get('department') else (ocr_data['ภาควิชา'] if ocr_data and ocr_data.get('ภาควิชา') else '') }}">
+        
+          {% if department_error %}
+            <div class="error-message">{{ department_error }}</div>
+          {% endif %}
+        
           <label>Academic Year</label>
-          <input type="text" name="academic_year" value="{{ ocr_data['ปีการศึกษา'] if ocr_data and ocr_data['ปีการศึกษา'] else '' }}">
-  
+          <input type="text" name="academic_year"
+                 value="{{ request.form['academic_year'] if request.form.get('academic_year') else (ocr_data['ปีการศึกษา'] if ocr_data and ocr_data.get('ปีการศึกษา') else '') }}">
+        
           <label>Advisor</label>
-          <input type="text" name="advisor" value="{{ ocr_data['อาจารย์ที่ปรึกษา'] if ocr_data and ocr_data['อาจารย์ที่ปรึกษา'] else '' }}">
-  
+          <textarea name="advisor" rows="2" oninput="autoResize(this)" style="resize: none; overflow: hidden;">{{ request.form['advisor'] if request.form.get('advisor') else (ocr_data['อาจารย์ที่ปรึกษา'].replace('ที่ปรึกษาร่วม', '\nที่ปรึกษาร่วม') if ocr_data and ocr_data.get('อาจารย์ที่ปรึกษา') else '') }}</textarea>
+        
           <label>Keywords</label>
-          <input type="text" name="keywords" value="{{ ocr_data['คำสำคัญ'] if ocr_data and ocr_data['คำสำคัญ'] else '' }}">
-  
+          <textarea name="keywords" rows="1" oninput="autoResize(this)" style="resize: none; overflow: hidden;">{{ request.form['keywords'] if request.form.get('keywords') else (ocr_data['คำสำคัญ'] if ocr_data and ocr_data.get('คำสำคัญ') else '') }}</textarea>
+        
+            
           <div class="form-buttons">
             <a href="{{ url_for('index') }}" class="cancel-btn">ยกเลิก</a>
             <button type="submit" class="submit-btn">ยืนยัน</button>
@@ -147,4 +233,106 @@
     window.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll("textarea").forEach(autoResize);
     });
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const textareas = document.querySelectorAll('textarea.auto-resize');
+      textareas.forEach((textarea) => {
+        const resize = () => {
+          textarea.style.height = 'auto';
+          textarea.style.height = textarea.scrollHeight + 'px';
+        };
+        textarea.addEventListener('input', resize);
+        resize(); // เรียกครั้งแรกตอนโหลด
+      });
+    });
+
+
+    function replaceWords() {
+  const wrongInput = document.querySelector('.wrong-word');
+  const correctInput = document.querySelector('.correct-word');
+  const wrong = wrongInput.value.trim();
+  const correct = correctInput.value.trim();
+
+  if (!wrong || !correct) return;
+
+  showLoading();
+
+  setTimeout(() => {
+    const elements = [...document.querySelectorAll('textarea'), ...document.querySelectorAll('input[type="text"]')];
+    elements.forEach((el) => {
+      if (el.value.includes(wrong)) {
+        el.value = el.value.replaceAll(wrong, correct);
+        autoResize(el);
+      }
+    });
+
+    wrongInput.value = '';
+    correctInput.value = '';
+    hideLoading();
+  }, 300);
+}
+
+function showLoading() {
+  document.getElementById('loading-spinner').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loading-spinner').style.display = 'none';
+}
+
+const form = document.querySelector('.upload-form');
+  if (form) {
+    form.addEventListener('submit', function () {
+      document.getElementById('loading-spinner').style.display = 'flex';
+    });
+  }
+  
+  function replaceAndLog() {
+  const wrongInput = document.querySelector('.wrong-word');
+  const correctInput = document.querySelector('.correct-word');
+  const wrong = wrongInput.value.trim();
+  const correct = correctInput.value.trim();
+  const field = "ชื่อ field ที่เกี่ยวข้อง";  // คุณอาจให้ค่า field จาก hidden input หรือกำหนดเอง
+
+  if (!wrong || !correct) return;
+
+  showLoading();
+
+  // อัปเดตค่าใน client
+  const elements = [...document.querySelectorAll('textarea'), ...document.querySelectorAll('input[type="text"]')];
+  elements.forEach((el) => {
+    if (el.value.includes(wrong)) {
+      el.value = el.value.replaceAll(wrong, correct);
+      autoResize(el);
+    }
+  });
+
+  // ส่งข้อมูลไปยัง backend เพื่อบันทึก log
+  fetch('/log_correction', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      wrong_word: wrong,        // ส่งในฟิลด์ wrong_word ซึ่งใน backendเราจะ map ไปที่ original_word
+      correct_word: correct,
+      field_name: field
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      alert('บันทึกคำแก้ไขแล้ว');
+    } else {
+      alert('เกิดข้อผิดพลาดในการบันทึก');
+    }
+  })
+  .finally(() => {
+    wrongInput.value = '';
+    correctInput.value = '';
+    hideLoading();
+  });
+}
   </script>
+
+</html>

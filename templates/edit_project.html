@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
+
     .sort-dropdown-wrapper {
       position: relative;
       display: inline-block;
@@ -44,7 +45,7 @@
   <nav class="navbar">
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
-
+  
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -54,14 +55,19 @@
           <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
+  
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
       {% else %}
-      <a href="{{ url_for('login') }}" class="login-btn {% if request.endpoint == 'login' %}hidden-login-btn{% endif %}">เข้าสู่ระบบ</a>
+      <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
       {% endif %}
     </div>
   </nav>
@@ -79,7 +85,7 @@
           <div class="uploaded-file-box">
             <i class="fa-solid fa-file-pdf pdf-icon"></i>
             <div class="uploaded-file-name">
-              {{ filename }}
+              {{ project.file_path.split('\\')[-1] }}
             </div>
           </div>
           {% endif %}
@@ -97,7 +103,11 @@
           <input type="text" name="author" value="{{ project.author }}">
 
           <label>Abstract</label>
-          <textarea name="abstract" rows="10" style="white-space: pre-wrap;">{{ project.abstract_th }}</textarea>
+          <textarea name="abstract" class="auto-resize" rows="10">{{ project.abstract_th }}</textarea>
+
+          
+          <label>Abstract (EN)</label>
+          <textarea name="abstract_en" class="auto-resize" rows="10">{{ project.abstract_en }}</textarea>
 
           <label>Faculty</label>
           <input type="text" name="faculty" value="{{ project.faculty }}">
@@ -125,15 +135,11 @@
     </div>
   </div>
 
-  <script>
-  const textareas = document.querySelectorAll('textarea');
-  textareas.forEach(textarea => {
-    textarea.style.height = textarea.scrollHeight + 'px';
-    textarea.addEventListener('input', () => {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    });
-  });
-  </script>
+
+ 
 </body>
+
+
+
 </html>
+

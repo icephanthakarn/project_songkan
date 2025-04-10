@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: f948e53ab7b2
+Revision ID: 7fdd7ae718a1
 Revises: 
-Create Date: 2025-03-30 21:32:09.921545
+Create Date: 2025-04-11 02:13:36.512427
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f948e53ab7b2'
+revision = '7fdd7ae718a1'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -47,11 +47,22 @@ def upgrade():
     sa.Column('password', sa.String(length=255), nullable=False),
     sa.Column('role', sa.String(length=20), nullable=False),
     sa.Column('student_name', sa.String(length=100), nullable=True),
+    sa.Column('faculty', sa.String(length=100), nullable=True),
     sa.Column('student_major', sa.String(length=100), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('student_id'),
     sa.UniqueConstraint('email')
+    )
+    op.create_table('correction_log',
+    sa.Column('id', sa.String(length=36), nullable=False),
+    sa.Column('original_word', sa.String(length=255), nullable=False),
+    sa.Column('corrected_word', sa.String(length=255), nullable=False),
+    sa.Column('field_name', sa.String(length=100), nullable=True),
+    sa.Column('student_id', sa.String(length=10), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['student_id'], ['users.student_id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('pdf_file',
     sa.Column('id', sa.String(length=36), nullable=False),
@@ -85,6 +96,7 @@ def downgrade():
     op.drop_table('project_student')
     op.drop_table('project_keyword')
     op.drop_table('pdf_file')
+    op.drop_table('correction_log')
     op.drop_table('users')
     op.drop_table('projects')
     op.drop_table('keywords')

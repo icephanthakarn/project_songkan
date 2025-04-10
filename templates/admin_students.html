@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - จัดการนักศึกษา</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_students.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<style>
+h1{
+  font-size: 22px;
+}
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: flex-end;
+}
+
+.filter-item label {
+  display: block;
+  font-weight: bold;
+  color: #ea5c0d;
+  margin-bottom: 6px;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  min-width: 180px;
+}
+
+.icon-dropdown {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ea5c0d;
+  pointer-events: none;
+}
+
+.reset-button-container {
+  margin-top: 26px;
+}
+
+.reset-btn {
+  background-color: #ea5c0d;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  font-size: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 8px 16px;
+  text-align: left;
+  font-size: 15px;
+  border: 1px solid #ddd;
+}
+
+th {
+  background-color: #fef2ea;
+}
+
+.column-title {
+  font-weight: 600;
+  color: #ea5c0d;
+}
+
+.edit-btn {
+    background-color: #E35205;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+  margin: 0;
+}
+
+</style>
+<body>
+  <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+    
+        {% if user_logged_in %}
+        <div class="profile-wrapper">
+          <div class="profile-btn">
+            <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+              {{ first_letter }}
+            </div>
+            <span class="student-id">{{ student_id }}</span>
+            <i class="fa-solid fa-chevron-down arrow"></i>
+          </div>
+    
+          <div class="dropdown-menu">
+            <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+    
+            {% if user_is_admin %}
+              <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+              <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+          </div>
+        </div>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
+        {% endif %}
+      </div>
+    </nav>
+
+  <!-- Search + Filter -->
+  <form method="get" action="{{ url_for('admin_student_page') }}">
+    <div class="container">
+      <!-- 🔍 Search bar -->
+      <div class="search-container">
+        <input type="text" name="q" placeholder="ค้นหาชื่อ, อีเมล, รหัสนักศึกษา ได้ที่นี่" value="{{ request.args.get('q', '') }}">
+        <button type="submit" class="search-btn">ค้นหา</button>
+      </div>
+  
+      <!-- 📂 Filter group -->
+      <div class="filter-group">
+        <div class="filter-item">
+          <label>คณะ</label>
+          <div class="select-wrapper">
+            <select name="faculty" onchange="this.form.submit()">
+              <option value="">ทั้งหมด</option>
+              <option value="วิทยาศาสตร์" {% if request.args.get('faculty') == 'วิทยาศาสตร์' %}selected{% endif %}>วิทยาศาสตร์</option>
+            </select>
+            <i class="fa-solid fa-chevron-down icon-dropdown"></i>
+          </div>
+        </div>
+  
+        <div class="filter-item">
+          <label>ภาควิชา</label>
+          <div class="select-wrapper">
+            <select name="department" onchange="this.form.submit()">
+              <option value="">ทั้งหมด</option>
+              {% for dept in ['ชีววิทยา', 'เคมี', 'ฟิสิกส์', 'คณิตศาสตร์', 'สถิติ', 'วิทยาการคอมพิวเตอร์'] %}
+              <option value="{{ dept }}" {% if request.args.get('department') == dept %}selected{% endif %}>{{ dept }}</option>
+              {% endfor %}
+            </select>
+            <i class="fa-solid fa-chevron-down icon-dropdown"></i>
+          </div>
+        </div>
+  
+        <div class="reset-button-container">
+          <a href="{{ url_for('admin_student_page') }}" class="reset-btn" style="text-decoration:none;"> คืนค่า </a>
+        </div>
+      </div>
+    </div> <!-- /container -->
+  </form>
+  
+  <!-- 📋 ตาราง -->
+  <div class="container">
+    <h1>รายชื่อนักศึกษา</h1>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="column-title">รหัสนักศึกษา</span></th>
+          <th><span class="column-title">ชื่อ</span></th>
+          <th><span class="column-title">นามสกุล</span></th>
+          <th><span class="column-title">Email</span></th>
+          <th><span class="column-title">คณะ</span></th>
+          <th><span class="column-title">ภาควิชา</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr>
+          <td>{{ student.student_id }}</td>
+          <td>{{ student.student_name.split()[0] }}</td>
+          <td>{{ student.student_name.split()[1] }}</td>
+          <td>{{ student.email }}</td>
+          <td>{{ student.faculty or '-' }}</td>
+          <td>{{ student.student_major or '-' }}</td>
+          <td>
+            <a href="{{ url_for('edit_student', student_id=student.student_id) }}" class="edit-btn">Edit</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

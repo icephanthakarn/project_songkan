@@ -17,7 +17,7 @@
       top: 100%;
       right: 0;
       background-color: #fff;
-      border: 1px solid #ea5c0d;
+      border: 1px solid #e35205;
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       z-index: 1000;
@@ -28,7 +28,7 @@
     .sort-dropdown-menu div {
       padding: 10px 15px;
       cursor: pointer;
-      color: #ea5c0d;
+      color: #e35205;
       font-weight: bold;
     }
 
@@ -40,6 +40,55 @@
       transform: rotate(180deg);
       transition: transform 0.2s ease;
     }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.3);
+      backdrop-filter: blur(1px);
+      z-index: 999;
+      display: none;
+    }
+
+    .error-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      color: #e35205;
+      padding: 30px 40px;
+      border-radius: 12px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      display: none;
+    }
+
+    .confirm-btn {
+      padding: 8px 20px;
+      background-color: rgba(255, 255, 255, 0.844);
+      color: #e35205;
+      border: 1px solid #e35205;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+
+    .cancel-btn {
+      padding: 8px 20px;
+      background-color: #e35305cb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -47,16 +96,7 @@
   <nav class="navbar">
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
-
-      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
-      {% if user_is_admin %}
-      <div class="dropdown-menu">
-        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
-        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
-      </div>
-      {% endif %}
-
+  
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -66,9 +106,14 @@
           <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
+  
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
@@ -77,6 +122,7 @@
       {% endif %}
     </div>
   </nav>
+  
 
   <!-- ✅ ครอบ container -->
   <div class="container">
@@ -87,9 +133,13 @@
         </div>
         <div class="info">
           <p>ชื่อ - นามสกุล : <span class="highlight">{{ user_name }}</span></p>
-          <p>รหัสนักศึกษา : <span class="highlight">{{ student_id }}</span></p>
+          {% if user_is_admin %}
+            <p>รหัสนักศึกษา : <span class="highlight">Admin</span></p>
+          {% else %}
+            <p>รหัสนักศึกษา : <span class="highlight">{{ student_id }}</span></p>
+          {% endif %}
           <p>คณะ : <span class="highlight">{{ faculty }}</span></p>
-          <p>ภาควิชา : <span class="highlight">{{ department }}</span></p>
+          <p>ภาควิชา : <span class="highlight">{{ student_major }}</span></p>
         </div>
       </div>
 
@@ -118,11 +168,11 @@
             <!--<p> {{ project.title_th }}</p>-->
             <p>ปีการศึกษา : <span class="highlight">{{ project.academic_year }}</span></p>
             <p>คณะ : <span class="highlight">{{ project.faculty }}</span></p>
-            <p>สาขา : <span class="highlight">{{ project.department }}</span></p>
+            <p>ภาควิชา : <span class="highlight">{{ project.department }}</span></p>
             <div class="action-buttons">
-              <a href="{{ url_for('edit_project', project_id=project.id) }}" class="edit-btn">แก้ไข</a>
+              <a href="{{ url_for('edit_project', project_id=project.id) }}" class="edit-btn">Edit</a>
               <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}">
-                <button type="submit" class="delete-btn">ลบ</button>
+                <button type="button" class="delete-btn" onclick="confirmDelete('{{ project.id }}')">Delete</button>
               </form>
             </div>
           </div>
@@ -130,7 +180,7 @@
         {% endfor %}
     
 
-    
+                <!--<p> นักศึกษา</p>-->
       {% else %}
         {% if user_project %}
         <div class="project-card">
@@ -140,16 +190,18 @@
             </div>
           {% endif %}
           <div class="project-info">
-            <h3>{{ user_project.title }}</h3>
-            <p>(ชื่ออังกฤษ {{ user_project.alt_title }})</p>
-            <p>ปีการศึกษา : <span class="highlight">{{ user_project.year }}</span></p>
+    
+            <h3 style="font-weight: bold; color:#444444d8;">{{ project.title_th }}</h3>
+            <p>ปีการศึกษา : <span class="highlight">{{ user_project.academic_year }}</span></p>
             <p>คณะ : <span class="highlight">{{ user_project.faculty }}</span></p>
-            <p>สาขา : <span class="highlight">{{ user_project.department }}</span></p>
+            <p>ภาควิชา : <span class="highlight">{{ user_project.department }}</span></p>
             <div class="action-buttons">
-              <a href="{{ url_for('project_detail', project_id=user_project.id) }}" class="detail-btn">แสดงรายละเอียด</a>
-              <form method="POST" action="{{ url_for('delete_project', project_id=user_project.id) }}">
-                <button type="submit" class="delete-btn">ลบ 🗑️</button>
+              <a href="{{ url_for('edit_project', project_id=user_project.id) }}" class="edit-btn">Edit</a>
+              <form method="POST" action="{{ url_for('delete_project') }}">
+                <input type="hidden" name="project_id" value="{{ user_project.id }}">
+                  <button type="button" class="delete-btn" onclick="confirmDelete('{{ user_project.id }}')">Delete</button>
               </form>
+              
             </div>
           </div>
         </div>
@@ -168,6 +220,33 @@
     </div>
     </div>
   </div>
+  <!-- ✅ Overlay -->
+<div class="overlay" id="deleteOverlay"></div>
+
+<!-- ✅ Popup ยืนยันการลบ -->
+<div class="error-popup" id="deletePopup">
+  <p>คุณแน่ใจหรือไม่ว่าต้องการลบงานออกจากระบบ?</p>
+  <form id="deleteForm" method="POST" action="{{ url_for('delete_project') }}">
+    <input type="hidden" name="project_id" id="hidden-project-id">
+    <button type="submit" class="confirm-btn">OK</button>
+    <button type="button" class="cancel-btn" onclick="closeDeletePopup()">Cancel</button>
+  </form>
+</div>
+
+<script>
+  function confirmDelete(projectId) {
+    event.preventDefault();
+    document.getElementById('deleteOverlay').style.display = 'block';
+    document.getElementById('deletePopup').style.display = 'block';
+    document.getElementById('hidden-project-id').value = projectId;
+  }
+
+  function closeDeletePopup() {
+    document.getElementById('deleteOverlay').style.display = 'none';
+    document.getElementById('deletePopup').style.display = 'none';
+  }
+</script>
 </body>
+</html>
 
 

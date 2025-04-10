@@ -45,8 +45,10 @@ body {
 
 /*nav bar*/
 .container {
-    max-width: 100%;
-    margin: 0 auto;
+    max-width: 1920px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
     padding-left: 65px;
     padding-right: 65px;
     box-sizing: border-box;
@@ -71,6 +73,7 @@ body {
     color: #E35205;
     text-decoration: none;
     font-size: 18px;
+    display: inline-block;
 }
 
 .login-btn {
@@ -166,6 +169,7 @@ body {
     z-index: 999;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     overflow: hidden;
+    white-space: nowrap;
 }
 
 .dropdown-menu a {
@@ -340,7 +344,7 @@ body {
     border-radius: 14px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    min-width: 120px;
+    min-width: 125px;
     overflow: hidden;
 }
 
@@ -601,6 +605,7 @@ body {
     cursor: pointer;
     /*font-weight: bold;
     font-size: 22px;*/
+    margin-bottom: 15px;
 }
 
 .upload-link {
@@ -786,7 +791,7 @@ body {
     justify-content: center;
     flex-wrap: wrap;
     max-width: 1920px;
-    margin: 0 ;
+    margin: auto ;
     box-sizing: border-box;
 }
   
@@ -926,6 +931,7 @@ body {
         padding: 5vw;            /* padding ยืดหยุ่นตามจอ */
         box-sizing: border-box;
         border-radius: 1vw;
+        height: auto;
     }
     .login-box h2 {
         font-size: 3.5vw;        /* หัวข้อย่อขยายตามจอ */
@@ -942,6 +948,16 @@ body {
         padding: 2vw;
         border-radius: 1vw;
     }
+
+    .login-box button {
+        width: 50%;
+        max-width: 100px;
+        padding: 10px 0;
+        margin: 20px auto 0 auto;
+        font-size: 14px;        /* ✅ ใหญ่ขึ้นแบบ responsive */
+        border-radius: 8px;
+        line-height: normal;
+      }
 
     /*upload page*/
     .upload-form {

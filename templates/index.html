@@ -8,21 +8,10 @@
 
 </head>
 <body>
-  <!-- Navbar -->
-  <!-- Navbar -->
   <nav class="navbar">
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
-
-      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
-      {% if user_is_admin %}
-      <div class="dropdown-menu">
-        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
-        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
-      </div>
-      {% endif %}
-
+  
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -32,10 +21,14 @@
           <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
+  
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-          <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
-
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
@@ -58,7 +51,7 @@
         <div class="filter-item">
           <label>ปีการศึกษา</label>
           <div class="select-wrapper">
-            <select name="year">
+            <select name="year" onchange="this.form.submit()">
               <option value="">ทั้งหมด</option>
               {% for y in ['2563', '2564', '2565', '2566'] %}
                 <option value="{{ y }}" {% if request.args.get('year') == y %}selected{% endif %}>{{ y }}</option>
@@ -71,7 +64,7 @@
         <div class="filter-item">
           <label>คณะ</label>
           <div class="select-wrapper">
-            <select name="faculty">
+            <select name="faculty" onchange="this.form.submit()">
               <option value="">ทั้งหมด</option>
               <option value="วิทยาศาสตร์" {% if request.args.get('faculty') == 'วิทยาศาสตร์' %}selected{% endif %}>วิทยาศาสตร์</option>
             </select>
@@ -80,11 +73,11 @@
         </div>
   
         <div class="filter-item">
-          <label>สาขา</label>
+          <label>ภาควิชา</label>
           <div class="select-wrapper">
-            <select name="department">
+            <select name="department" onchange="this.form.submit()">
               <option value="">ทั้งหมด</option>
-              {% for dept in ['ชีววิทยา', 'เคมี', 'ฟิสิกส์', 'คณิตศาสตร์ประยุกต์', 'วิทยาการคอมพิวเตอร์', 'ภาควิชาสถิติ', 'Digital Technology and Integrated Innovation (International Program)'] %}
+              {% for dept in ['ชีววิทยา', 'เคมี', 'ฟิสิกส์', 'คณิตศาสตร์', 'วิทยาการคอมพิวเตอร์', 'สถิติ', 'Digital Technology and Integrated Innovation (International Program)'] %}
                 <option value="{{ dept }}" {% if request.args.get('department') == dept %}selected{% endif %}>{{ dept }}</option>
               {% endfor %}
             </select>
@@ -93,11 +86,12 @@
         </div>
   
         <div class="reset-button-container">
-          <a href="{{ url_for('index') }}" class="reset-btn" style="text-decoration:none;"> คืนค่า </a>
+          <a href="{{ url_for('index') }}" class="reset-btn" style="text-decoration:none;">คืนค่า</a>
         </div>
       </div>
     </div>
   </form>
+  
   
     <!-- แสดงผลการค้นหา + จัดเรียง -->
   <div class="container">
@@ -109,9 +103,12 @@
           จัดเรียงตาม <i class="fa-solid fa-chevron-down arrow-icon" id="sort-icon"></i>
         </button>
         <div class="sort-dropdown-menu" id="sortDropdown">
-          <div onclick="sortBy('name')">A-Z</div>
-          <div onclick="sortBy('name')">วันที่เพิ่มล่าสุด</div>
+          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='title_asc') }}'">A–Z / ก-ฮ</div>
+          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='title_desc') }}'">Z-A / ฮ-ก</div>
+          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='year_desc') }}'">ปีการศึกษาล่าสุด</div>
+          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='year_asc') }}'">ปีการศึกษาเก่าสุด</div>
         </div>
+             
       </div>
     </div>
 
@@ -136,10 +133,11 @@
 
             <div class="action-buttons">
                 <a href="{{ url_for('project_detail', project_id=project.id) }}" class="detail-btn">แสดงรายละเอียด</a>
-                <a href="{{ url_for('static', filename=project.file_path|replace('\\', '/') ) }}" 
-                class="download-btn" download>
-                ดาวน์โหลดไฟล์ <i class="fa-solid fa-file-arrow-down icon"></i>
+                <a href="{{ url_for('download_file', project_id=project.id) }}" 
+                class="download-btn">
+               ดาวน์โหลดไฟล์ <i class="fa-solid fa-file-arrow-down icon"></i>
              </a>
+             
             </div>
         </div>
         </div>

@@ -43,17 +43,16 @@ class UserModel(db.Model):
     password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default='student')
     student_name = Column(String(100))
+    faculty = Column(String(100), default='วิทยาศาสตร์')  
     student_major = Column(String(100))
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.datetime.now)
-
     projects = relationship('ProjectModel', secondary='project_student', back_populates='students')
 
 
 
 class ProjectModel(db.Model):
     __tablename__ = 'projects'
-
     id = Column(String(10), primary_key=True, default=generate_custom_id('SC', 6))
     title_th = Column(String(255), nullable=False)
     title_en = Column(String(255))
@@ -62,12 +61,11 @@ class ProjectModel(db.Model):
     abstract_en = Column(Text)
     department = Column(String(100))
     faculty = Column(String(100))
-
+    
     author = Column(String(255))
     advisor = Column(String(255))
     keywords = Column(String(255))
     keywords_rel = relationship('KeywordModel', secondary='project_keyword', back_populates='projects')
-
     file_path = Column(String(255))     
     thumbnail_path = Column(String(255))
 
@@ -126,6 +124,17 @@ class ProjectStudentModel(db.Model):
     project_id = Column(String(10), ForeignKey('projects.id'), primary_key=True)
     student_id = Column(String(10), ForeignKey('users.student_id'), primary_key=True)
 
+
+class CorrectionLogModel(db.Model):
+    __tablename__ = 'correction_log' #เก็บคำผิด
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    original_word = Column(String(255), nullable=False)  # คำที่ผิด
+    corrected_word = Column(String(255), nullable=False)  # คำที่ถูก
+    student_id = Column(String(10), ForeignKey('users.student_id'))  # ใครเป็นคนกดแก้
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    student = relationship('UserModel')  # สำหรับ join ข้อมูล user
 
 
 # ตัวเสริม: property นี้สำหรับดึง keywords ของ Project

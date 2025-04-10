@@ -47,16 +47,7 @@
   <nav class="navbar">
     <div class="container">
       <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
-
-      <!-- เพิ่มลิงก์ Admin ถ้าเป็นแอดมิน -->
-      {% if user_is_admin %}
-      <div class="dropdown-menu">
-        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
-        <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
-        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
-      </div>
-      {% endif %}
-
+  
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
@@ -66,8 +57,14 @@
           <span class="student-id">{{ student_id }}</span>
           <i class="fa-solid fa-chevron-down arrow"></i>
         </div>
+  
         <div class="dropdown-menu">
           <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
         </div>
       </div>
@@ -80,17 +77,17 @@
 
 <div class="project-detail-page">
   <div class="left-panel">
-      <!-- หากมี thumbnail ก็แสดงรูป แทน DIV เดิม -->
-      <div class="thumbnail">
-        {% if project.thumbnail_path %}
-        <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
-        {% else %}
-          <div class="pdf-preview">Preview</div>
-        {% endif %}
-      </div>
+    <!-- หากมี thumbnail ก็แสดงรูป แทน DIV เดิม -->
+    <div class="thumbnail">
+      {% if project.thumbnail_path %}
+      <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
+      {% else %}
+        <div class="pdf-preview">Preview</div>
+      {% endif %}
+    </div>
 
-      <!-- ปุ่มดาวน์โหลดไฟล์ PDF -->
-      <a href="{{ url_for('static', filename=project.thumbnail_path|replace('\\', '/') ) }}" class="download-pdf" download>
+    <!-- ปุ่มดาวน์โหลดไฟล์ PDF -->
+      <a href="{{ url_for('download_file',project_id=project.id) }}" class="download-pdf" download>
         <i class="fa-solid fa-file-pdf pdf-icon"></i>
         <div class="filename">{{ project.file_path.split('\\')[-1] }}</div>
       </a>

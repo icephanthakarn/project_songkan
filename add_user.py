@@ -6,6 +6,21 @@ from werkzeug.security import generate_password_hash
 
 # ข้อมูลตัวอย่างนักศึกษา
 sample_students = [
+     {
+        "student_id": "63050137",
+        "student_name": "นางสาว ธนวรรณ วงศ์เพชรชารัต ",
+        "student_major": "วิทยาการคอมพิวเตอร์",
+        "email": "63050137@kmitl.ac.th",
+        "password": "50137"  # จะถูก hash ก่อนเก็บ
+    },
+     {
+        "student_id": " 63050097",
+        "student_name": "นางสาว กัลยวรรธน์ ชื่นชมรติมงคล ",
+        "student_major": "วิทยาการคอมพิวเตอร์",
+        "email": "63050097@kmitl.ac.th",
+        "password": "50097"  # จะถูก hash ก่อนเก็บ
+    },
+
     {
         "student_id": "64050166",
         "student_name": "พันธกานต์ กิจนุกร",
@@ -15,7 +30,7 @@ sample_students = [
     },
 
         {
-        "student_id": "64050466",
+        "student_id": "64050456",
         "student_name": "ดุสิตา บุญหนุน",
         "student_major": "วิทยาการคอมพิวเตอร์",
         "email": "64050456@kmitl.ac.th",
@@ -29,6 +44,7 @@ sample_students = [
         "role": "admin",
         "password": "1234"
     },
+ 
 
 ]
 
