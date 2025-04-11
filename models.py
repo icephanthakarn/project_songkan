@@ -125,8 +125,8 @@ class ProjectStudentModel(db.Model):
     student_id = Column(String(10), ForeignKey('users.student_id'), primary_key=True)
 
 
-class CorrectionLogModel(db.Model):
-    __tablename__ = 'correction_log' #เก็บคำผิด
+class CorrectionModel(db.Model):
+    __tablename__ = 'correction' #เก็บคำผิด
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     original_word = Column(String(255), nullable=False)  # คำที่ผิด

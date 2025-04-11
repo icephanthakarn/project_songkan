@@ -89,6 +89,19 @@
       font-weight: bold;
       cursor: pointer;
     }
+
+    .replace-btn {
+    background-color: white;
+    color: #E35205;
+    border: 1px solid #E35205;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 8px;
+    margin-top: 34px;
+}
   </style>
 </head>
 <body>
@@ -197,10 +210,26 @@
             <p>ภาควิชา : <span class="highlight">{{ user_project.department }}</span></p>
             <div class="action-buttons">
               <a href="{{ url_for('edit_project', project_id=user_project.id) }}" class="edit-btn">Edit</a>
-              <form method="POST" action="{{ url_for('delete_project') }}">
-                <input type="hidden" name="project_id" value="{{ user_project.id }}">
-                  <button type="button" class="delete-btn" onclick="confirmDelete('{{ user_project.id }}')">Delete</button>
-              </form>
+
+            <form method="POST"
+                  action="{{ url_for('replace_file', project_id=user_project.id) }}"
+                  enctype="multipart/form-data"
+                  style="display:inline;"
+                  id="replace-form">
+              
+              <input type="file"
+                    name="pdf_file"
+                    id="replace-file-input"
+                    style="display:none"
+                    onchange="document.getElementById('replace-form').submit();" />
+
+              <!-- ปุ่ม Replace -->
+              <button type="button"
+                      class="replace-btn"
+                      onclick="document.getElementById('replace-file-input').click();">
+                Replace File
+              </button>
+            </form>
               
             </div>
           </div>
@@ -248,5 +277,4 @@
 </script>
 </body>
 </html>
-
 

@@ -3,7 +3,7 @@ from sqlalchemy import or_, and_, func,cast, Integer
 from sqlalchemy.orm import aliased
 from werkzeug.utils import secure_filename
 import os
-from models import db, ProjectModel, UserModel, PdfFileModel, KeywordModel, ProjectKeywordModel,ProjectStudentModel,CorrectionLogModel
+from models import db, ProjectModel, UserModel, PdfFileModel, KeywordModel, ProjectKeywordModel,ProjectStudentModel,CorrectionModel
 from ocr_logic import process_pdf_to_data
 from werkzeug.security import check_password_hash, generate_password_hash  # <- ถ้าต้องการใช้ generate_password_hash
 from flask_migrate import Migrate
@@ -190,118 +190,155 @@ def upload_project():
 # === Submit project info and save to DB ===
 @app.route('/submit-info', methods=['POST'])
 def fill_project_info():
-    file_path = session.get('uploaded_file_path')
     user_info = session.get('user')
-    user = UserModel.query.get(user_info['student_id']) if user_info else None
+    if not user_info:
+        return redirect(url_for('login'))
 
-    pdf_filename = session['uploaded_filename']
-    pdf_full_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename)
+    pdf_filename = session.get('uploaded_filename')    # ไฟล์ pdf ใหม่ใน session
+    pdf_full_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename) if pdf_filename else None
 
+    # ตรวจว่ากำลัง replace โปรเจกต์อยู่หรือเปล่า
+    replace_proj_id = session.get('replace_project_id')  # <-- เราจะสร้างตัวแปรนี้ตอนกด Replace File
+
+    # ตรวจสอบภาควิชา (department) ตามโค้ดเดิม
     department = request.form['department'].strip()
-
-    # ✅ รายการภาควิชาที่อนุญาต
-    all_departments = [
-        'วิทยาการคอมพิวเตอร์',
-        'ชีววิทยา',
-        'ฟิสิกส์',
-        'เคมี',
-        'คณิตศาสตร์',
-        'สถิติ'
-    ]
-
+    all_departments = ['วิทยาการคอมพิวเตอร์', 'ชีววิทยา', 'ฟิสิกส์', 'เคมี', 'คณิตศาสตร์', 'สถิติ']
     department_error = None
     if not department:
         department_error = 'กรุณากรอกชื่อภาควิชา'
     elif department not in all_departments:
-        department_error = (
-            'ไม่พบภาควิชานี้ กรุณากรอกตามรายการ: ' + ', '.join(all_departments)
-        )
+        department_error = ('ไม่พบภาควิชานี้ กรุณากรอกตามรายการ: ' + ', '.join(all_departments))
 
     if department_error:
         return render_template(
             'upload.html',
             ocr_data=session.get('ocr_data'),
-            uploaded_filename=session.get('uploaded_filename'),
+            uploaded_filename=pdf_filename,
             department_error=department_error,
             request=request
         )
 
-    # ✅ 1. สร้าง ProjectModel
-    project = ProjectModel(
-        title_th=request.form['title'],
-        title_en=request.form['alt_title'],
-        author=request.form['author'] or user.student_name,
-        abstract_th=request.form['abstract'],
-        abstract_en=request.form['abstract_en'],
-        faculty=request.form['faculty'],
-        department=department,
-        academic_year=request.form.get('academic_year', ''),
-        advisor=request.form['advisor'],
-        keywords=request.form['keywords'],
-        file_path=os.path.join('static', 'uploads', pdf_filename)
-    )
-    db.session.add(project)
-    db.session.commit()
+    # ----------------------------------------------------------------
+    #            แยก 2 กรณี: Replace vs. สร้างใหม่
+    # ----------------------------------------------------------------
+    if replace_proj_id:
+        # =============== (A) REPLACE PROJECT เดิม ===============
+        project = ProjectModel.query.get_or_404(replace_proj_id)
 
-    # ✅ 2. สร้าง thumbnail จากหน้าแรก PDF
-    pages = convert_from_path(pdf_full_path, 200)
-    if pages:
-        thumb_filename = pdf_filename.rsplit('.', 1)[0] + "_thumb.jpg"
-        thumb_full_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
-        pages[0].save(thumb_full_path, 'JPEG')
+        # อัปเดต fields ต่าง ๆ จากฟอร์ม
+        project.title_th = request.form['title']
+        project.title_en = request.form['alt_title']
+        project.author = request.form['author']
+        project.abstract_th = request.form['abstract']
+        project.abstract_en = request.form['abstract_en']
+        project.faculty = request.form['faculty']
+        project.department = department
+        project.academic_year = request.form.get('academic_year', '')
+        project.advisor = request.form['advisor']
+        project.keywords = request.form['keywords']
 
-        thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
-        project.thumbnail_path = thumbnail_path
+        # ถ้าอัปโหลดไฟล์ PDF ใหม่ (pdf_filename ไม่เป็น None)
+        if pdf_filename:
+            project.file_path = os.path.join('static', 'uploads', pdf_filename)
+
+            # สร้าง thumbnail ใหม่จากหน้าแรก PDF
+            if pdf_full_path:
+                pages = convert_from_path(pdf_full_path, 200)
+                if pages:
+                    thumb_filename = pdf_filename.rsplit('.', 1)[0] + "_thumb.jpg"
+                    thumb_full_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
+                    pages[0].save(thumb_full_path, 'JPEG')
+
+                    thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
+                    project.thumbnail_path = thumbnail_path
+
         db.session.commit()
 
-    # ✅ 3. สร้างความสัมพันธ์ต่างๆ
+        # (ถ้าต้องจัดการ keywords ใหม่/อัปเดตข้อมูล StudentModels หรืออะไรก็ตาม
+        #  ก็สามารถดัดแปลงส่วนนี้เพิ่มได้เหมือนกรณีสร้างใหม่)
 
-    # 3.1 ProjectStudent
-    if user:
-        db.session.add(ProjectStudentModel(project_id=project.id, student_id=user.student_id))
+        # ล้าง session สำหรับการ replace
+        session.pop('replace_project_id', None)
+        session.pop('uploaded_file_path', None)
+        session.pop('uploaded_filename', None)
+        session.pop('ocr_data', None)
 
-    # 3.2 PdfFile
-    db.session.add(PdfFileModel(
-        file_name=pdf_filename,
-        file_path=project.file_path,
-        project_id=project.id
-    ))
+    else:
+        # =============== (B) CREATE PROJECT ใหม่ ===============
+        user = UserModel.query.get(user_info['student_id']) if user_info else None
 
-    # 3.3 Keywords (เช็ค keyword ซ้ำ)
-    keyword_list = list(set([kw.strip() for kw in request.form['keywords'].split(',') if kw.strip()]))
+        # 1) สร้าง ProjectModel ใหม่
+        project = ProjectModel(
+            title_th=request.form['title'],
+            title_en=request.form['alt_title'],
+            author=request.form['author'] or (user.student_name if user else ''),
+            abstract_th=request.form['abstract'],
+            abstract_en=request.form['abstract_en'],
+            faculty=request.form['faculty'],
+            department=department,
+            academic_year=request.form.get('academic_year', ''),
+            advisor=request.form['advisor'],
+            keywords=request.form['keywords'],
+            file_path=os.path.join('static', 'uploads', pdf_filename) if pdf_filename else None
+        )
+        db.session.add(project)
+        db.session.commit()
 
-    for kw in keyword_list:
-        keyword_obj = KeywordModel.query.filter_by(keyword_text=kw).first()
-        if not keyword_obj:
-            keyword_obj = KeywordModel(keyword_text=kw)
-            db.session.add(keyword_obj)
-            db.session.flush()
+        # 2) สร้าง Thumbnail
+        if pdf_full_path:
+            pages = convert_from_path(pdf_full_path, 200)
+            if pages:
+                thumb_filename = pdf_filename.rsplit('.', 1)[0] + "_thumb.jpg"
+                thumb_full_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
+                pages[0].save(thumb_full_path, 'JPEG')
 
-        existing_relation = ProjectKeywordModel.query.filter_by(
-            project_id=project.id,
-            keyword_id=keyword_obj.id
-        ).first()
+                thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
+                project.thumbnail_path = thumbnail_path
+                db.session.commit()
 
-        if not existing_relation:
-            db.session.add(ProjectKeywordModel(
-                project_id=project.id,
-                keyword_id=keyword_obj.id
+        # 3) สร้างความสัมพันธ์ ProjectStudent / PdfFile / Keywords ...
+        if user:
+            db.session.add(ProjectStudentModel(project_id=project.id, student_id=user.student_id))
+
+        if pdf_filename:
+            db.session.add(PdfFileModel(
+                file_name=pdf_filename,
+                file_path=project.file_path,
+                project_id=project.id
             ))
 
-    db.session.commit()
+        # จัดการ Keywords
+        keyword_list = list(set([kw.strip() for kw in request.form['keywords'].split(',') if kw.strip()]))
+        for kw in keyword_list:
+            keyword_obj = KeywordModel.query.filter_by(keyword_text=kw).first()
+            if not keyword_obj:
+                keyword_obj = KeywordModel(keyword_text=kw)
+                db.session.add(keyword_obj)
+                db.session.flush()
+            existing_relation = ProjectKeywordModel.query.filter_by(
+                project_id=project.id,
+                keyword_id=keyword_obj.id
+            ).first()
+            if not existing_relation:
+                db.session.add(ProjectKeywordModel(
+                    project_id=project.id,
+                    keyword_id=keyword_obj.id
+                ))
+        db.session.commit()
 
-    # ✅ ล้าง session upload
-    session['user_project'] = {
-        'title': project.title_th,
-        'alt_title': project.title_en,
-        'year': project.academic_year,
-        'faculty': project.faculty,
-        'department': project.department
-    }
-    session.pop('uploaded_file_path', None)
-    session.pop('uploaded_filename', None)
+        # ล้าง session upload
+        session['user_project'] = {
+            'title': project.title_th,
+            'alt_title': project.title_en,
+            'year': project.academic_year,
+            'faculty': project.faculty,
+            'department': project.department
+        }
+        session.pop('uploaded_file_path', None)
+        session.pop('uploaded_filename', None)
 
     return redirect(url_for('profile'))
+
 
 # === Profile Page ===
 @app.route('/profile')
@@ -600,20 +637,15 @@ def inject_user():
 def replace_word():
     original = request.form['original_word']
     corrected = request.form['corrected_word']
-    field = request.form['field_name']  # แนะนำให้ส่งมาจาก hidden input ในฟอร์มด้วย
     student_id = session['user']['student_id']
 
     # 👉 ทำการแก้ไขฟอร์ม OCR
-    ocr_data = session.get('ocr_data', {})
-    if field in ocr_data and original in ocr_data[field]:
-        ocr_data[field] = ocr_data[field].replace(original, corrected)
-        session['ocr_data'] = ocr_data
+
 
     # 👉 บันทึก Log การแก้ไขคำ
-    correction = CorrectionLogModel(
+    correction = CorrectionModel(
         original_word=original,
         corrected_word=corrected,
-        field_name=field,
         student_id=student_id
     )
     db.session.add(correction)
@@ -629,10 +661,9 @@ def log_correction():
 
     if original and correct:
         student_id = session['user']['student_id']  # ดึง student_id จาก session
-        log = CorrectionLogModel(
+        log = CorrectionModel(
             original_word=original,
             corrected_word=correct,
-            field_name=data.get('field_name'),  # ถ้ามีส่ง field_name มาด้วย
             student_id=student_id
         )
         db.session.add(log)
@@ -640,6 +671,48 @@ def log_correction():
         return {'status': 'ok'}
 
     return {'status': 'error'}, 400
+
+@app.route('/replace_file/<project_id>', methods=['POST'])
+def replace_file(project_id):
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    # 1) ดึงโปรเจกต์เป้าหมาย
+    project = ProjectModel.query.get_or_404(project_id)
+
+    # 2) รับไฟล์ใหม่
+    uploaded_file = request.files.get('pdf_file')
+    if not uploaded_file:
+        flash("กรุณาเลือกไฟล์ .pdf ก่อน")
+        return redirect(url_for('profile'))
+
+    # 3) เซฟไฟล์ลงโฟลเดอร์
+    filename = secure_filename(uploaded_file.filename)
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    uploaded_file.save(save_path)
+
+    # 4) OCR
+    ocr_data = process_pdf_to_data(save_path)
+    for key in ocr_data:
+        if isinstance(ocr_data[key], str):
+            ocr_data[key] = correct_word(ocr_data[key])
+
+    # 5) เก็บข้อมูลที่ต้องใช้ลง session
+    session['replace_project_id'] = project.id        # เก็บ id โปรเจกต์เดิม
+    session['uploaded_filename'] = filename
+    session['uploaded_file_path'] = save_path
+    session['ocr_data'] = ocr_data
+    
+    # 6) render upload.html + ใส่ข้อมูลจาก ProjectModel เดิม เพื่อให้ผู้ใช้แก้ไขได้
+    return render_template(
+        'upload.html',
+        uploaded_filename=filename,
+        ocr_data=ocr_data,
+        # ใส่ค่าเริ่มต้นจาก project เดิมไปด้วยถ้าอยากให้โชว์
+        existing_project=project  
+    )
+
 
 if __name__ == '__main__':
     app.run(debug=True)
