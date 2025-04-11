@@ -16,3 +16,5 @@ static/uploads/
 # Fonts with license (ถ้ามี)
 baansuan_fonts/
 *.zip
+
+migrations
