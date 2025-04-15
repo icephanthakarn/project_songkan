@@ -1,7 +1,7 @@
 /* static/css/index.css */
 
  /*font*/
-@font-face {
+ @font-face {
     font-family: 'Sukhumvit Set';
     src: url('../fonts/SukhumvitSet-Light.woff2') format('woff2');
     font-weight: 300;
@@ -1007,18 +1007,6 @@ body {
         margin-left: 0px;
     }
     
-    .replace-btn {
-        background-color: white;
-        color: #E35205;
-        border: 1px solid #E35205;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 13px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-right: 8px;
-        margin-top: 34px;
-    }
 }
 
 @media screen and (min-width: 1920px) {

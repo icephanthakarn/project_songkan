@@ -37,6 +37,20 @@ sample_students = [
         "password": "50456"  # จะถูก hash ก่อนเก็บ
     },
 
+        {    "student_id": "63050169",
+        "student_name": "นางสาว aaa วvvต ",
+        "student_major": "วิทยาการคอมพิวเตอร์",
+        "email": "63050169@kmitl.ac.th",
+        "password": "50169"  # จะถูก hash ก่อนเก็บ
+        },
+        {
+                    "student_id": "63050176",
+        "student_name": "นางสาว daga aggae ",
+        "student_major": "วิทยาการคอมพิวเตอร์",
+        "email": "63050176@kmitl.ac.th",
+        "password": "501376"  # จะถูก hash ก่อนเก็บ
+        },
+        
         {
         "student_id": "admin001",     # ✅ เพิ่มบรรทัดนี้
         "student_name": "Admin",

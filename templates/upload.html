@@ -163,7 +163,15 @@
       <form method="post" action="{{ url_for('fill_project_info') }}" enctype="multipart/form-data" class="upload-form">
         
         <div class="left-panel">
-          <div class="pdf-preview">Preview</div>
+          <div class="pdf-preview">
+            {% if temp_thumbnail_path %}
+              <img src="{{ url_for('static', filename=temp_thumbnail_path) }}" 
+                   alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+            {% else %}
+              Preview
+            {% endif %}
+          </div>
+
           
           {% if uploaded_filename %}
           <div class="uploaded-file-box">

@@ -17,4 +17,7 @@ static/uploads/
 baansuan_fonts/
 *.zip
 
+
+
+static/temp_uploads
 migrations

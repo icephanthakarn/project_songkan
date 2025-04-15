@@ -101,6 +101,62 @@
     font-weight: bold;
     margin-right: 8px;
     margin-top: 34px;
+
+    .replace-btn {
+      background-color: white; color: #E35205; border: 1px solid #E35205;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      cursor: pointer; font-weight: bold; margin-right: 8px; margin-top: 34px;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    .loading-content {
+      text-align: center;
+      color: white;
+    }
+    .icon-move-wrapper {
+      position: relative;
+      width: 240px;
+      height: 80px;
+      margin: auto;
+    }
+    .folder-left, .folder-right {
+      font-size: 48px;
+      color: #ffb347;
+      position: absolute;
+      bottom: 0;
+    }
+    .folder-left {
+      left: 0;
+    }
+    .folder-right {
+      right: 0;
+    }
+    .flying-file {
+      font-size: 28px;
+      color: white;
+      position: absolute;
+      bottom: 12px;
+      left: 0;
+      animation: flyCurve 2s ease-in-out infinite;
+    }
+    @keyframes flyCurve {
+      0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+      25% { transform: translate(70px, -20px) rotate(-10deg); }
+      50% { transform: translate(110px, -30px) rotate(0deg); }
+      75% { transform: translate(150px, -20px) rotate(10deg); }
+      100% { transform: translate(190px, 0) rotate(0deg); }
+
 }
   </style>
 </head>
@@ -169,6 +225,7 @@
                     </span>
                   </form>
                 </div>
+
         {% for project in admin_projects %}
         <div class="project-card">
           {% if project.thumbnail_path %}
@@ -191,49 +248,46 @@
           </div>
         </div>
         {% endfor %}
-    
-
-                <!--<p> นักศึกษา</p>-->
+               <!--<p> นักศึกษา</p>-->
       {% else %}
         {% if user_project %}
-        <div class="project-card">
-          {% if user_project.thumbnail_path %}
-            <div class="thumbnail">
-              <img src="{{ url_for('static', filename=user_project.thumbnail_path) }}" alt="PDF Thumbnail">
-            </div>
-          {% endif %}
-          <div class="project-info">
-    
-            <h3 style="font-weight: bold; color:#444444d8;">{{ project.title_th }}</h3>
-            <p>ปีการศึกษา : <span class="highlight">{{ user_project.academic_year }}</span></p>
-            <p>คณะ : <span class="highlight">{{ user_project.faculty }}</span></p>
-            <p>ภาควิชา : <span class="highlight">{{ user_project.department }}</span></p>
-            <div class="action-buttons">
-              <a href="{{ url_for('edit_project', project_id=user_project.id) }}" class="edit-btn">Edit</a>
+          {% for p in user_project %}
+            <div class="project-card">
+              {% if p.thumbnail_path %}
+                <div class="thumbnail">
+                  <img src="{{ url_for('static', filename=p.thumbnail_path) }}" alt="PDF Thumbnail">
+                </div>
+              {% endif %}
 
-            <form method="POST"
-                  action="{{ url_for('replace_file', project_id=user_project.id) }}"
-                  enctype="multipart/form-data"
-                  style="display:inline;"
-                  id="replace-form">
-              
-              <input type="file"
-                    name="pdf_file"
-                    id="replace-file-input"
-                    style="display:none"
-                    onchange="document.getElementById('replace-form').submit();" />
+              <div class="project-info">
+                <h3 style="font-weight: bold; color:#444444d8;">{{ p.title_th }}</h3>
+                <p>ปีการศึกษา : <span class="highlight">{{ p.academic_year }}</span></p>
+                <p>คณะ : <span class="highlight">{{ p.faculty }}</span></p>
+                <p>ภาควิชา : <span class="highlight">{{ p.department }}</span></p>
+                <div class="action-buttons">
+                  <a href="{{ url_for('edit_project', project_id=p.id) }}" class="edit-btn">Edit</a>
 
-              <!-- ปุ่ม Replace -->
-              <button type="button"
-                      class="replace-btn"
-                      onclick="document.getElementById('replace-file-input').click();">
-                Replace File
-              </button>
-            </form>
-              
+                  <form method="POST"
+                        action="{{ url_for('replace_file', project_id=p.id) }}"
+                        enctype="multipart/form-data"
+                        style="display:inline;"
+                        id="replace-form-{{ p.id }}">
+                    <input type="file"
+                          name="pdf_file"
+                          id="replace-file-input-{{ p.id }}"
+                          style="display:none"
+                          onchange="document.getElementById('replace-form-{{ p.id }}').submit();" />
+                    <button type="button"
+                            class="replace-btn"
+                            onclick="document.getElementById('replace-file-input-{{ p.id }}').click();">
+                      Replace File
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          {% endfor %}
+
         {% else %}
         <!-- นักศึกษาเพิ่มได้แค่ไฟล์เดียว -->
         <div class="upload-box">
@@ -262,18 +316,45 @@
   </form>
 </div>
 
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-content">
+    <div class="icon-move-wrapper">
+      <i class="fa-solid fa-folder folder-left"></i>
+      <i class="fa-solid fa-file flying-file"></i>
+      <i class="fa-solid fa-folder folder-right"></i>
+    </div>
+    <p style="margin-top: 16px; color: #fff; font-weight: bold; font-size: 1.2rem;">In Process....</p>
+  </div>
+</div>
+
 <script>
-  function confirmDelete(projectId) {
-    event.preventDefault();
-    document.getElementById('deleteOverlay').style.display = 'block';
-    document.getElementById('deletePopup').style.display = 'block';
-    document.getElementById('hidden-project-id').value = projectId;
-  }
+
 
   function closeDeletePopup() {
     document.getElementById('deleteOverlay').style.display = 'none';
     document.getElementById('deletePopup').style.display = 'none';
   }
+
+  function confirmDelete(projectId) {
+      event.preventDefault();
+      document.getElementById('deleteOverlay').style.display = 'block';
+      document.getElementById('deletePopup').style.display = 'block';
+      document.getElementById('hidden-project-id').value = projectId;
+    }
+
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const fileInput = document.getElementById("real-file");
+      const overlay = document.getElementById("loadingOverlay");
+      if (fileInput) {
+        fileInput.addEventListener("change", function () {
+          if (fileInput.files.length > 0) {
+            overlay.style.display = "flex";
+          }
+        });
+      }
+    });
+
 </script>
 </body>
 </html>
