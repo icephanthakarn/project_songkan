@@ -79,18 +79,22 @@
         
         <!-- ด้านซ้าย (Preview) -->
         <div class="left-panel">
-          <div class="pdf-preview">Preview</div>
-
-          {% if project.file_path %}
+          <div class="pdf-preview">
+            {% if project.pdf_file and project.pdf_file.thumbnail_path %}
+              <img src="{{ url_for('static', filename=project.pdf_file.thumbnail_path) }}" 
+                   alt="PDF Thumbnail" style="width: 100%; height: auto;">
+            {% else %}
+              <p style="color: #aaa;">ไม่มีภาพตัวอย่าง</p>
+            {% endif %}
+          </div>
           <div class="uploaded-file-box">
             <i class="fa-solid fa-file-pdf pdf-icon"></i>
             <div class="uploaded-file-name">
-              {{ project.file_path.split('\\')[-1] }}
+              {{ project.pdf_file.file_name if project.pdf_file else 'ไม่มีไฟล์' }}
             </div>
           </div>
-          {% endif %}
         </div>
-
+        
         <!-- ด้านขวา (ฟอร์ม) -->
         <div class="right-panel">
           <label>Title</label>
@@ -103,11 +107,11 @@
           <input type="text" name="author" value="{{ project.author }}">
 
           <label>Abstract</label>
-          <textarea name="abstract" class="auto-resize" rows="10">{{ project.abstract_th }}</textarea>
+          <textarea name="abstract" class="auto-resize" >{{ project.abstract_th }}</textarea>
 
           
           <label>Abstract (EN)</label>
-          <textarea name="abstract_en" class="auto-resize" rows="10">{{ project.abstract_en }}</textarea>
+          <textarea name="abstract_en" class="auto-resize" >{{ project.abstract_en }}</textarea>
 
           <label>Faculty</label>
           <input type="text" name="faculty" value="{{ project.faculty }}">
@@ -122,7 +126,8 @@
           <input type="text" name="advisor" value="{{ project.advisor }}">
 
           <label>Keywords</label>
-          <input type="text" name="keywords" value="{{ project.keywords }}">
+          <input type="text" name="keywords" value="{{ keywords_text }}">
+          
 
           <!-- ปุ่มต่าง ๆ -->
           <div class="form-buttons">
@@ -135,11 +140,30 @@
     </div>
   </div>
 
-
- 
 </body>
 
+<script>
+  function autoResize(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = (textarea.scrollHeight) + "px";
+  }
 
+  window.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll("textarea").forEach(autoResize);
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const textareas = document.querySelectorAll('textarea.auto-resize');
+    textareas.forEach((textarea) => {
+      const resize = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      };
+      textarea.addEventListener('input', resize);
+      resize(); // เรียกครั้งแรกตอนโหลด
+    });
+  });
+</script>
 
 </html>
 

@@ -561,17 +561,20 @@ def edit_project(project_id):
         project.title_en = request.form['alt_title']
         project.author = request.form['author']
         project.abstract_th = request.form['abstract']
+        project.abstract_en = request.form['abstract_en']
         project.faculty = request.form['faculty']
         project.department = request.form['department']
         project.academic_year = request.form['academic_year']
         project.advisor = request.form['advisor']
         project.updated_by = session['user']['student_id']
-
-
         db.session.commit()
         return redirect(url_for('profile'))
 
-    return render_template('edit_project.html', project=project)
+    # ✅ สร้าง keywords_text จาก keywords_rel
+    keywords_text = ', '.join([kw.keyword_text for kw in project.keywords_rel])
+
+    return render_template('edit_project.html', project=project, keywords_text=keywords_text)
+
 
 def is_admin():
     user_session = session.get('user')
