@@ -38,6 +38,75 @@
       transform: rotate(180deg);
       transition: transform 0.2s ease;
     }
+
+
+    .replace-tool {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  margin: 20px auto;
+  border: 1px solid #eaeaea;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  max-width: 1728px;
+}
+
+.replace-title {
+  color: #E35205;
+  font-weight: bold;
+  font-size: 20px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  border-bottom: 3px solid #E35205;
+  display: inline-block;
+  padding-bottom: 4px;
+}
+
+.replace-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.replace-fields label {
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.replace-fields input {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  flex: 1;
+  min-width: 180px;
+  background-color: #f9f9f9;
+  transition: 0.2s;
+}
+
+.replace-fields input:focus {
+  border-color: #E35205;
+  outline: none;
+  background-color: #fffefc;
+}
+
+.replace-action-btn {
+  background-color: #E35205;
+  color: white;
+  font-weight: bold;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.replace-action-btn:hover {
+  background-color: #c84604;
+}
+
   </style>
 </head>
 <body>
@@ -71,6 +140,16 @@
       {% endif %}
     </div>
   </nav>
+
+  <div class="replace-tool">
+    <h3 class="replace-title">เครื่องมือแก้ไขคำผิด</h3>
+    <div class="replace-fields">
+      <label for="wrong-word">แก้ไขคำผิด:</label>
+      <input type="text" id="wrong-word" class="wrong-word" placeholder="คำผิด">
+      <input type="text" id="correct-word" class="correct-word" placeholder="คำที่ถูกต้อง">
+      <button class="replace-action-btn" type="button" onclick="replaceAndLog()">แทนที่</button>
+    </div>
+  </div>
 
   <!-- Container หลัก -->
   <div class="container">
