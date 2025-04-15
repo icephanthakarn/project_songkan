@@ -64,14 +64,17 @@ class ProjectModel(db.Model):
     
     author = Column(String(255))
     advisor = Column(String(255))
-    keywords = Column(String(255))
     keywords_rel = relationship('KeywordModel', secondary='project_keyword', back_populates='projects')
-    file_path = Column(String(255))     
-    thumbnail_path = Column(String(255))
 
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.datetime.now)
 
+    created_by = Column(String(10), ForeignKey('users.student_id', name='fk_created_by_user'))
+    updated_by = Column(String(10), ForeignKey('users.student_id', name='fk_updated_by_user'))
+
+
+    creator = relationship('UserModel', foreign_keys=[created_by], backref='created_projects')
+    updater = relationship('UserModel', foreign_keys=[updated_by], backref='updated_projects')
     # One-to-Many: 1 Project -> N Users
     #users = relationship('UserModel', back_populates='project')
 
@@ -110,6 +113,7 @@ class PdfFileModel(db.Model):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(255), nullable=False)
+    thumbnail_path = Column(String(255))
     uploaded_at = Column(DateTime, default=datetime.datetime.now)
 
     # บังคับ One-to-One => unique=True เพื่อป้องกันการซ้ำ
@@ -133,6 +137,10 @@ class CorrectionModel(db.Model):
     corrected_word = Column(String(255), nullable=False)  # คำที่ถูก
     student_id = Column(String(10), ForeignKey('users.student_id'))  # ใครเป็นคนกดแก้
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+    project_id = Column(String(10), ForeignKey('projects.id'))   
+    project = relationship('ProjectModel', backref='corrections')
 
     student = relationship('UserModel')  # สำหรับ join ข้อมูล user
 

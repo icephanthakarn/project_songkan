@@ -103,11 +103,12 @@
           จัดเรียงตาม <i class="fa-solid fa-chevron-down arrow-icon" id="sort-icon"></i>
         </button>
         <div class="sort-dropdown-menu" id="sortDropdown">
-          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='title_asc') }}'">A–Z / ก-ฮ</div>
-          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='title_desc') }}'">Z-A / ฮ-ก</div>
-          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='year_desc') }}'">ปีการศึกษาล่าสุด</div>
-          <div class="sort-option" onclick="window.location='{{ url_for('index', sort_by='year_asc') }}'">ปีการศึกษาเก่าสุด</div>
+          <div class="sort-option" onclick='window.location="{{ url_for("index", sort_by="title_asc") }}"'>A–Z / ก-ฮ</div>
+          <div class="sort-option" onclick='window.location="{{ url_for("index", sort_by="title_desc") }}"'>Z–A / ฮ-ก</div>
+          <div class="sort-option" onclick='window.location="{{ url_for("index", sort_by="year_desc") }}"'>ปีการศึกษาล่าสุด</div>
+          <div class="sort-option" onclick='window.location="{{ url_for("index", sort_by="year_asc") }}"'>ปีการศึกษาเก่าสุด</div>
         </div>
+        
              
       </div>
     </div>
@@ -118,11 +119,12 @@
       <div class="container">      
         <div class="project-card">
           <div class="thumbnail">
-            {% if project.thumbnail_path %}
-              <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
-            {% else %}
-              <img src="{{ url_for('static', filename='img/default-thumbnail.png') }}" alt="No thumbnail" style="width: 150px;" />
-            {% endif %}
+            {% if project.pdf_file and project.pdf_file.thumbnail_path %}
+            <img src="{{ url_for('static', filename=project.pdf_file.thumbnail_path) }}" alt="PDF Thumbnail">
+          {% else %}
+            <img src="{{ url_for('static', filename='img/default-thumbnail.png') }}" alt="No thumbnail" style="width: 150px;" />
+          {% endif %}
+          
           </div>
         <div class="project-info">
           <h3>{{ project.title_th }}</h3>

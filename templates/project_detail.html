@@ -51,7 +51,7 @@
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
-          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+          <div class="avatar-circle" style="background-color:  avatar_color ">
             {{ first_letter }}
           </div>
           <span class="student-id">{{ student_id }}</span>
@@ -73,28 +73,35 @@
       {% endif %}
     </div>
   </nav>
-</body>
 
-<div class="project-detail-page">
-  <div class="left-panel">
-    <!-- หากมี thumbnail ก็แสดงรูป แทน DIV เดิม -->
-    <div class="thumbnail">
-      {% if project.thumbnail_path %}
-      <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
-      {% else %}
-        <div class="pdf-preview">Preview</div>
-      {% endif %}
-    </div>
 
-    <!-- ปุ่มดาวน์โหลดไฟล์ PDF -->
-      <a href="{{ url_for('download_file',project_id=project.id) }}" class="download-pdf" download>
-        <i class="fa-solid fa-file-pdf pdf-icon"></i>
-        <div class="filename">{{ project.file_path.split('\\')[-1] }}</div>
-      </a>
-  </div>
+  <div class="project-detail-page">
 
-  <div class="right-panel">
-      <div class="info-group">
+      <div class="left-panel">
+        <!-- Thumbnail -->
+        <div class="thumbnail">
+          {% if project.pdf_file and project.pdf_file.thumbnail_path %}
+            <img src="{{ url_for('static', filename=project.pdf_file.thumbnail_path) }}" alt="PDF Thumbnail">
+          {% else %}
+            <div class="pdf-preview">Preview</div>
+          {% endif %}
+        </div>
+
+        <!-- ปุ่มดาวน์โหลด -->
+        <a href="{{ url_for('download_file', project_id=project.id) }}" class="download-pdf" download>
+          <i class="fa-solid fa-file-pdf pdf-icon"></i>
+          <div class="filename">
+            {% if project.pdf_file and project.pdf_file.file_name %}
+              {{ project.pdf_file.file_name }}
+            {% else %}
+              ไม่พบชื่อไฟล์
+            {% endif %}
+          </div>
+        </a>
+      </div>
+
+      <div class="right-panel">
+        <div class="info-group">
           <label>Title</label>
           <p>{{ project.title_th }}</p>
 
@@ -128,8 +135,9 @@
               {{ kw.keyword_text }}{% if not loop.last %}, {% endif %}
             {% endfor %}
           </p>
-          
+        </div>
       </div>
+
+
   </div>
-</div>
 

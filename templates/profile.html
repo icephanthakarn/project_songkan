@@ -156,8 +156,7 @@
       50% { transform: translate(110px, -30px) rotate(0deg); }
       75% { transform: translate(150px, -20px) rotate(10deg); }
       100% { transform: translate(190px, 0) rotate(0deg); }
-
-}
+    }
   </style>
 </head>
 <body>
@@ -226,13 +225,16 @@
                   </form>
                 </div>
 
-        {% for project in admin_projects %}
-        <div class="project-card">
-          {% if project.thumbnail_path %}
-            <div class="thumbnail">
-              <img src="{{ url_for('static', filename=project.thumbnail_path) }}" alt="PDF Thumbnail">
-            </div>
-          {% endif %}
+                {% for project in admin_projects %}
+                <div class="project-card">
+                  <div class="thumbnail">
+                    {% if project.pdf_file and project.pdf_file.thumbnail_path %}
+                      <img src="{{ url_for('static', filename=project.pdf_file.thumbnail_path) }}" alt="PDF Thumbnail">
+                    {% else %}
+                      <img src="{{ url_for('static', filename='img/default-thumbnail.png') }}" alt="No Thumbnail" />
+                    {% endif %}
+                  </div>
+        
           <div class="project-info">
             <h3 style="font-weight: bold; color:#444444d8;">{{ project.title_th }}</h3>
             <!--<p> {{ project.title_th }}</p>-->
@@ -251,13 +253,15 @@
                <!--<p> นักศึกษา</p>-->
       {% else %}
         {% if user_project %}
-          {% for p in user_project %}
-            <div class="project-card">
-              {% if p.thumbnail_path %}
-                <div class="thumbnail">
-                  <img src="{{ url_for('static', filename=p.thumbnail_path) }}" alt="PDF Thumbnail">
-                </div>
-              {% endif %}
+        {% for p in user_project %}
+        <div class="project-card">
+          <div class="thumbnail">
+            {% if p.pdf_file and p.pdf_file.thumbnail_path %}
+              <img src="{{ url_for('static', filename=p.pdf_file.thumbnail_path) }}" alt="PDF Thumbnail">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/default-thumbnail.png') }}" alt="No Thumbnail" />
+            {% endif %}
+          </div>
 
               <div class="project-info">
                 <h3 style="font-weight: bold; color:#444444d8;">{{ p.title_th }}</h3>
@@ -332,30 +336,30 @@
 <script>
 
 
+function confirmDelete(projectId) {
+    event.preventDefault();
+    document.getElementById('deleteOverlay').style.display = 'block';
+    document.getElementById('deletePopup').style.display = 'block';
+    document.getElementById('hidden-project-id').value = projectId;
+  }
+
   function closeDeletePopup() {
     document.getElementById('deleteOverlay').style.display = 'none';
     document.getElementById('deletePopup').style.display = 'none';
   }
 
-  function confirmDelete(projectId) {
-      event.preventDefault();
-      document.getElementById('deleteOverlay').style.display = 'block';
-      document.getElementById('deletePopup').style.display = 'block';
-      document.getElementById('hidden-project-id').value = projectId;
-    }
+  document.addEventListener("DOMContentLoaded", function () {
+    const forms = document.querySelectorAll("form"); // ครอบคลุมทั้งของ admin และ student
+    const overlay = document.getElementById("loadingOverlay");
 
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const fileInput = document.getElementById("real-file");
-      const overlay = document.getElementById("loadingOverlay");
-      if (fileInput) {
-        fileInput.addEventListener("change", function () {
-          if (fileInput.files.length > 0) {
-            overlay.style.display = "flex";
-          }
-        });
-      }
+    forms.forEach((form) => {
+      form.addEventListener("submit", function () {
+        if (overlay) {
+          overlay.style.display = "flex";
+        }
+      });
     });
+  });
 
 </script>
 </body>

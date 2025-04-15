@@ -13,7 +13,7 @@ import math
 import re
 import shutil
 from ocr_logic import correct_word, process_pdf_to_data
-
+from flask import jsonify
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -226,12 +226,21 @@ def confirm_upload():
     final_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     shutil.move(temp_path, final_path)
 
+    # สร้าง ProjectModel (ไม่มี file_path ใน ProjectModel แล้ว)
     project = ProjectModel(
         title_th=request.form['title'],
-        author=request.form['author'],
-        file_path=final_path
+        author=request.form['author']
     )
     db.session.add(project)
+    db.session.flush()  # เพื่อให้ project.id ถูกสร้าง
+
+    # สร้าง PdfFileModel แยก
+    pdf_file = PdfFileModel(
+        file_name=filename,
+        file_path=final_path,
+        project_id=project.id
+    )
+    db.session.add(pdf_file)
     db.session.commit()
 
     print("[DEV] ยืนยันและย้ายไฟล์สำเร็จ:", final_path)
@@ -282,27 +291,25 @@ def fill_project_info():
             request=request
         )
 
-    # แก้ สร้าง project_id
+    # สร้าง Project ID เอง
     academic_year = request.form.get('academic_year', '')
     year_suffix = academic_year[-2:] if len(academic_year) >= 2 else '00'
     dept_code = department_code_map.get(department, '00')
-
     prefix = year_suffix + dept_code  # เช่น '6802'
 
-    # หา project_id ล่าสุดที่ขึ้นต้นด้วย prefix นั้น
+    # หา project_id ล่าสุด
     last_project = ProjectModel.query.filter(ProjectModel.id.like(f"{prefix}%")) \
-                        .order_by(ProjectModel.id.desc()).first()
-
+                                     .order_by(ProjectModel.id.desc()).first()
     if last_project:
-        last_suffix = int(last_project.id[-4:])  # ดึง 4 หลักท้ายมาแปลงเป็น int
+        last_suffix = int(last_project.id[-4:])
         new_suffix = str(last_suffix + 1).zfill(4)
     else:
         new_suffix = '0001'
 
-    custom_project_id = prefix + new_suffix  #แก้จนถึงบรรทัดนี้ เช่น '68020001' 
-    
+    custom_project_id = prefix + new_suffix
+
+    # ======== (A) REPLACE PROJECT ========
     if replace_proj_id:
-        # =============== (A) REPLACE PROJECT ===============
         project = ProjectModel.query.get_or_404(replace_proj_id)
 
         project.title_th = request.form['title']
@@ -312,12 +319,28 @@ def fill_project_info():
         project.abstract_en = request.form['abstract_en']
         project.faculty = request.form['faculty']
         project.department = department
-        project.academic_year = request.form.get('academic_year', '')
+        project.academic_year = academic_year
         project.advisor = request.form['advisor']
-        project.keywords = request.form['keywords']
+        project.updated_by = user_info['student_id']  # ดึงจาก session
 
+        # ถ้าอัปโหลดไฟล์ PDF ใหม่
         if pdf_filename:
-            project.file_path = os.path.join('static', 'uploads', pdf_filename)
+            pdf_path = os.path.join('static', 'uploads', pdf_filename)
+            
+            if project.pdf_file:
+                # อัปเดต pdf_file เดิม
+                project.pdf_file.file_name = pdf_filename
+                project.pdf_file.file_path = pdf_path
+            else:
+                # ยังไม่เคยมี pdf_file -> สร้างใหม่
+                new_pdf = PdfFileModel(
+                    file_name=pdf_filename,
+                    file_path=pdf_path,
+                    project_id=project.id
+                )
+                db.session.add(new_pdf)
+
+            # สร้าง thumbnail
             if pdf_full_path:
                 pages = convert_from_path(pdf_full_path, 200)
                 if pages:
@@ -325,21 +348,22 @@ def fill_project_info():
                     thumb_full_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
                     pages[0].save(thumb_full_path, 'JPEG')
 
-                    thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
-                    project.thumbnail_path = thumbnail_path
+                    # เก็บลง pdf_file.thumbnail_path
+                    if project.pdf_file:
+                        project.pdf_file.thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
 
         db.session.commit()
 
-        # ล้าง session
         session.pop('replace_project_id', None)
         session.pop('uploaded_file_path', None)
         session.pop('uploaded_filename', None)
         session.pop('ocr_data', None)
 
+    # ======== (B) CREATE NEW PROJECT ========
     else:
-        # =============== (B) CREATE NEW PROJECT ===============
         user = UserModel.query.get(user_info['student_id'])
 
+        # สร้าง project
         project = ProjectModel(
             id=custom_project_id,
             title_th=request.form['title'],
@@ -349,15 +373,15 @@ def fill_project_info():
             abstract_en=request.form['abstract_en'],
             faculty=request.form['faculty'],
             department=department,
-            academic_year=request.form.get('academic_year', ''),
+            academic_year=academic_year,
             advisor=request.form['advisor'],
-            keywords=request.form['keywords'],
-            file_path=os.path.join('static', 'uploads', pdf_filename) if pdf_filename else None
+            created_by=user.student_id,
+            updated_by=user.student_id
         )
         db.session.add(project)
         db.session.commit()
 
-        # ✅ สร้าง thumbnail
+        # สร้าง thumbnail (ถ้าต้องการ)
         if pdf_full_path:
             pages = convert_from_path(pdf_full_path, 200)
             if pages:
@@ -365,14 +389,12 @@ def fill_project_info():
                 thumb_full_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
                 pages[0].save(thumb_full_path, 'JPEG')
 
-                thumbnail_path = os.path.join('uploads', thumb_filename).replace('\\', '/')
-                project.thumbnail_path = thumbnail_path
-                db.session.commit()
+                # เก็บไว้ใน pdf_file.thumbnail_path (รอสร้าง pdf_file)
+                thumbnail_relative = os.path.join('uploads', thumb_filename).replace('\\', '/')
 
-        # ✅ เพิ่มความสัมพันธ์สมาชิกกลุ่ม (จากช่อง author)
+        # เพิ่มสมาชิกโปรเจกต์
         author_text = request.form.get('author', '')
         student_ids = re.findall(r'\d{8}', author_text)
-
         if user and user.student_id not in student_ids:
             student_ids.append(user.student_id)
 
@@ -383,35 +405,46 @@ def fill_project_info():
 
         db.session.commit()
 
-        # ✅ เพิ่ม PdfFileModel
+        # สร้าง PdfFileModel
         if pdf_filename:
-            db.session.add(PdfFileModel(
+            pdf_path = os.path.join('static', 'uploads', pdf_filename)
+            new_pdf = PdfFileModel(
                 file_name=pdf_filename,
-                file_path=project.file_path,
+                file_path=pdf_path,
                 project_id=project.id
-            ))
+            )
+            db.session.add(new_pdf)
+            db.session.flush()
 
-        # ✅ เพิ่ม Keywords
-        keyword_list = list(set([kw.strip() for kw in request.form['keywords'].split(',') if kw.strip()]))
-        for kw in keyword_list:
-            keyword_obj = KeywordModel.query.filter_by(keyword_text=kw).first()
-            if not keyword_obj:
-                keyword_obj = KeywordModel(keyword_text=kw)
-                db.session.add(keyword_obj)
-                db.session.flush()
-            existing_relation = ProjectKeywordModel.query.filter_by(
-                project_id=project.id,
-                keyword_id=keyword_obj.id
-            ).first()
-            if not existing_relation:
-                db.session.add(ProjectKeywordModel(
+            # ถ้ามี thumbnail ก็กำหนด
+            if pdf_full_path and pages:
+                new_pdf.thumbnail_path = thumbnail_relative
+
+            db.session.commit()
+
+        # เพิ่ม Keywords
+        if 'keywords' in request.form:
+            raw_keywords = request.form['keywords']
+            keyword_list = list(set([kw.strip() for kw in raw_keywords.split(',') if kw.strip()]))
+
+            for kw in keyword_list:
+                keyword_obj = KeywordModel.query.filter_by(keyword_text=kw).first()
+                if not keyword_obj:
+                    keyword_obj = KeywordModel(keyword_text=kw)
+                    db.session.add(keyword_obj)
+                    db.session.flush()
+                existing_relation = ProjectKeywordModel.query.filter_by(
                     project_id=project.id,
                     keyword_id=keyword_obj.id
-                ))
+                ).first()
+                if not existing_relation:
+                    db.session.add(ProjectKeywordModel(
+                        project_id=project.id,
+                        keyword_id=keyword_obj.id
+                    ))
+            db.session.commit()
 
-        db.session.commit()
-
-        # ✅ ล้าง session
+        # เคลียร์ session
         session['user_project'] = {
             'title': project.title_th,
             'alt_title': project.title_en,
@@ -423,6 +456,7 @@ def fill_project_info():
         session.pop('uploaded_filename', None)
 
     return redirect(url_for('profile'))
+
 
 
 # === Profile Page ===
@@ -469,8 +503,8 @@ def project_detail(project_id):
 @app.route('/download/<string:project_id>')
 def download_file(project_id):
     project = ProjectModel.query.get_or_404(project_id)
-    if project and project.file_path:
-        file_path = os.path.join(app.root_path, project.file_path.replace('\\', '/'))
+    if project and project.pdf_file.file_path:
+        file_path = os.path.join(app.root_path, project.pdf_file.file_path.replace('\\', '/'))
 
         if os.path.exists(file_path):
             return send_from_directory(
@@ -531,7 +565,9 @@ def edit_project(project_id):
         project.department = request.form['department']
         project.academic_year = request.form['academic_year']
         project.advisor = request.form['advisor']
-        project.keywords = request.form['keywords']
+        project.updated_by = session['user']['student_id']
+
+
         db.session.commit()
         return redirect(url_for('profile'))
 
@@ -613,8 +649,8 @@ def admin_delete_project(project_id):
     
     project = ProjectModel.query.get_or_404(project_id)
     # ลบไฟล์จริงในโฟลเดอร์ (ถ้าต้องการ)
-    if project.file_path:
-        file_full_path = os.path.join(app.root_path, project.file_path)
+    if project.pdf_file.file_path:
+        file_full_path = os.path.join(app.root_path, project.pdf_file.file_path)
         if os.path.exists(file_full_path):
             os.remove(file_full_path)
     # ลบข้อมูลใน DB
@@ -731,7 +767,8 @@ def replace_word():
     correction = CorrectionModel(
         original_word=original,
         corrected_word=corrected,
-        student_id=student_id
+        student_id=student_id,
+        project_id=request.form.get('project_id')
     )
     db.session.add(correction)
     db.session.commit()
@@ -743,17 +780,19 @@ def log_correction():
     data = request.get_json()
     original = data.get('wrong_word')   # รับค่าที่ส่งเข้ามาในฟิลด์ wrong_word
     correct = data.get('correct_word')
+    project_id = data.get('project_id')
 
     if original and correct:
         student_id = session['user']['student_id']  # ดึง student_id จาก session
         log = CorrectionModel(
             original_word=original,
             corrected_word=correct,
-            student_id=student_id
+            student_id=student_id,
+            project_id=project_id
         )
         db.session.add(log)
         db.session.commit()
-        return {'status': 'ok'}
+        return jsonify(status='ok')
 
     return {'status': 'error'}, 400
 

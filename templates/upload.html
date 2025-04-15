@@ -51,6 +51,18 @@
       margin-top: 4px;
     }
 
+    .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
        
   #replace-section {
     padding: 10px;
@@ -78,32 +90,60 @@
     background-color: #d44c00;
   }
 
-  .spinner-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
+  .loading-content {
+    text-align: center;
+    color: white;
+  }
 
-.spinner {
-  width: 60px;
-  height: 60px;
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #ea5c0d;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
+  .icon-move-wrapper {
+  position: relative;
+  width: 240px;
+  height: 80px;
+  margin: auto;
+  }
 
-@keyframes spin {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+  .folder-left, .folder-right {
+    font-size: 48px;
+    color: #ffb347;
+    position: absolute;
+    bottom: 0;
+  }
+  
+  .folder-left {
+    left: 0;
+  }
+
+  .folder-right {
+    right: 0;
+  }
+
+  .flying-file {
+    font-size: 28px;
+    color: white;
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    animation: flyCurve 2s ease-in-out infinite;
+  }
+
+  @keyframes flyCurve {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 1;
+    }
+    25% {
+      transform: translate(70px, -20px) rotate(-10deg);
+    }
+    50% {
+      transform: translate(110px, -30px) rotate(0deg);
+    }
+    75% {
+      transform: translate(150px, -20px) rotate(10deg);
+    }
+    100% {
+      transform: translate(190px, 0) rotate(0deg);
+    }
+  }
 
 
 
@@ -111,9 +151,7 @@
 </head>
 <body>
 
-  <div id="loading-spinner" class="spinner-overlay" style="display: none;">
-    <div class="spinner"></div>
-  </div>
+
 
 
   <!-- Navbar -->
@@ -124,7 +162,7 @@
       {% if user_logged_in %}
       <div class="profile-wrapper">
         <div class="profile-btn">
-          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+          <div class="avatar-circle" style="background-color:  avatar_color ">
             {{ first_letter }}
           </div>
           <span class="student-id">{{ student_id }}</span>
@@ -183,6 +221,8 @@
           {% endif %}
         </div>
   
+        <input type="hidden" id="project-id" value="{{ existing_project.id if existing_project else '' }}">
+
         <div class="right-panel">
           <label>Title</label>
           <textarea name="title" rows="1" oninput="autoResize(this)" style="resize: none; overflow: hidden;">{{ request.form['title'] if request.form.get('title') else (ocr_data['หัวข้อ'] if ocr_data and 'หัวข้อ' in ocr_data else '') }}</textarea>
@@ -233,6 +273,17 @@
     </div>
   </div>
 
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-content">
+      <div class="icon-move-wrapper">
+        <i class="fa-solid fa-folder folder-left"></i>
+        <i class="fa-solid fa-file flying-file"></i>
+        <i class="fa-solid fa-folder folder-right"></i>
+      </div>
+      <p style="margin-top: 16px; color: #fff; font-weight: bold; font-size: 1.2rem;">In Process....</p>
+    </div>
+  </div>
+  
   <script>
     function autoResize(textarea) {
       textarea.style.height = "auto";
@@ -256,6 +307,39 @@
       });
     });
 
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.getElementById("uploadForm");
+      const overlay = document.getElementById("loadingOverlay");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault(); // ❗️ยกเลิกการส่งแบบเดิม
+
+        overlay.style.display = "flex"; // ✅ แสดง overlay
+
+        const formData = new FormData(form);
+
+        fetch("{{ url_for('fill_project_info') }}", {
+          method: "POST",
+          body: formData
+        })
+        .then(response => {
+          if (response.redirected) {
+            // ✅ ถ้า server redirect → ตามไปเลย
+            window.location.href = response.url;
+          } else {
+            return response.text().then(text => {
+              overlay.style.display = "none"; // ❌ ถ้าไม่ redirect → ปิด overlay
+              alert("เกิดข้อผิดพลาด: " + text);
+            });
+          }
+        })
+        .catch(err => {
+          overlay.style.display = "none";
+          alert("เกิดข้อผิดพลาดระหว่างการส่งข้อมูล");
+          console.error(err);
+        });
+      });
+    });
 
     function replaceWords() {
   const wrongInput = document.querySelector('.wrong-word');
@@ -283,17 +367,17 @@
 }
 
 function showLoading() {
-  document.getElementById('loading-spinner').style.display = 'flex';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-function hideLoading() {
-  document.getElementById('loading-spinner').style.display = 'none';
-}
 
 const form = document.querySelector('.upload-form');
   if (form) {
     form.addEventListener('submit', function () {
-      document.getElementById('loading-spinner').style.display = 'flex';
+      document.getElementById('loadingOverlay').style.display = 'flex';
     });
   }
   
@@ -302,13 +386,13 @@ const form = document.querySelector('.upload-form');
   const correctInput = document.querySelector('.correct-word');
   const wrong = wrongInput.value.trim();
   const correct = correctInput.value.trim();
-  const field = "ชื่อ field ที่เกี่ยวข้อง";  // คุณอาจให้ค่า field จาก hidden input หรือกำหนดเอง
+  const projectId = document.getElementById('project-id')?.value || "";
 
+  
   if (!wrong || !correct) return;
 
   showLoading();
 
-  // อัปเดตค่าใน client
   const elements = [...document.querySelectorAll('textarea'), ...document.querySelectorAll('input[type="text"]')];
   elements.forEach((el) => {
     if (el.value.includes(wrong)) {
@@ -317,16 +401,16 @@ const form = document.querySelector('.upload-form');
     }
   });
 
-  // ส่งข้อมูลไปยัง backend เพื่อบันทึก log
+  // (1) แทนที่จะเรียก projectId แต่ในโค้ดไม่มีตัวแปร projectId ให้เห็น
   fetch('/log_correction', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      wrong_word: wrong,        // ส่งในฟิลด์ wrong_word ซึ่งใน backendเราจะ map ไปที่ original_word
+      wrong_word: wrong,       
       correct_word: correct,
-      field_name: field
+      project_id: PROJECT_ID  // <--- ตัวแปรนี้อาจจะยังไม่ได้ประกาศไว้
     })
   })
   .then(res => res.json())
@@ -340,9 +424,11 @@ const form = document.querySelector('.upload-form');
   .finally(() => {
     wrongInput.value = '';
     correctInput.value = '';
-    hideLoading();
+    hideLoading(); 
   });
 }
+
+const PROJECT_ID = "{{ existing_project.id if existing_project else session.get('replace_project_id', '') }}";
   </script>
 
 </html>
