@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, flash
-from sqlalchemy import or_, and_, func,cast, Integer
+from sqlalchemy import or_, and_, func,cast, Integer, desc
 from sqlalchemy.orm import aliased
 from werkzeug.utils import secure_filename
 import os
@@ -255,7 +255,17 @@ def fill_project_info():
     replace_proj_id = session.get('replace_project_id')
 
     department = request.form['department'].strip()
-    all_departments = ['วิทยาการคอมพิวเตอร์', 'ชีววิทยา', 'ฟิสิกส์', 'เคมี', 'คณิตศาสตร์', 'สถิติ']
+    all_departments = ['วิทยาการคอมพิวเตอร์', 'ชีววิทยา', 'ฟิสิกส์', 'เคมี', 'คณิตศาสตร์', 'สถิติ''Digital Technology and Integrated Innovation']
+
+    department_code_map = {
+        'เคมี': '01',
+        'ชีววิทยา': '02',
+        'ฟิสิกส์': '03',
+        'คณิตศาสตร์': '04',
+        'วิทยาการคอมพิวเตอร์': '05',
+        'สถิติ': '06',
+        'Digital Technology and Integrated Innovation (International Program)': '07'
+    }
 
     department_error = None
     if not department:
@@ -272,6 +282,25 @@ def fill_project_info():
             request=request
         )
 
+    # แก้ สร้าง project_id
+    academic_year = request.form.get('academic_year', '')
+    year_suffix = academic_year[-2:] if len(academic_year) >= 2 else '00'
+    dept_code = department_code_map.get(department, '00')
+
+    prefix = year_suffix + dept_code  # เช่น '6802'
+
+    # หา project_id ล่าสุดที่ขึ้นต้นด้วย prefix นั้น
+    last_project = ProjectModel.query.filter(ProjectModel.id.like(f"{prefix}%")) \
+                        .order_by(ProjectModel.id.desc()).first()
+
+    if last_project:
+        last_suffix = int(last_project.id[-4:])  # ดึง 4 หลักท้ายมาแปลงเป็น int
+        new_suffix = str(last_suffix + 1).zfill(4)
+    else:
+        new_suffix = '0001'
+
+    custom_project_id = prefix + new_suffix  #แก้จนถึงบรรทัดนี้ เช่น '68020001' 
+    
     if replace_proj_id:
         # =============== (A) REPLACE PROJECT ===============
         project = ProjectModel.query.get_or_404(replace_proj_id)
@@ -312,6 +341,7 @@ def fill_project_info():
         user = UserModel.query.get(user_info['student_id'])
 
         project = ProjectModel(
+            id=custom_project_id,
             title_th=request.form['title'],
             title_en=request.form['alt_title'],
             author=request.form['author'] or (user.student_name if user else ''),
@@ -350,6 +380,8 @@ def fill_project_info():
             student = UserModel.query.get(sid)
             if student:
                 db.session.add(ProjectStudentModel(project_id=project.id, student_id=sid))
+
+        db.session.commit()
 
         # ✅ เพิ่ม PdfFileModel
         if pdf_filename:

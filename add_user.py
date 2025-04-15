@@ -48,7 +48,7 @@ sample_students = [
         "student_name": "นางสาว daga aggae ",
         "student_major": "วิทยาการคอมพิวเตอร์",
         "email": "63050176@kmitl.ac.th",
-        "password": "501376"  # จะถูก hash ก่อนเก็บ
+        "password": "50176"  # จะถูก hash ก่อนเก็บ
         },
         
         {
