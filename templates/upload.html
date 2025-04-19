@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="th">
 <head>
   <meta charset="UTF-8" />
   <title>My App</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     .sort-dropdown-wrapper {
       position: relative;
@@ -213,8 +214,29 @@
 }
 
 
+.highlight-replace{
+      animation: flash 1.6s ease-out;
+      background-color:#fff59d;
+  }
+  @keyframes flash{
+      0%   {background-color:#fff59d;}
+      90%  {background-color:transparent;}
+      100% {background-color:transparent;}
+  }
 
-  </style>
+  .right-panel label{display:block;font-weight:600;margin:18px 0 4px;font-size:14px;}
+    .right-panel input[type="text"],
+    .right-panel textarea{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #ccc;border-radius:8px;font-size:14px;font-family:inherit;resize:none;overflow:hidden;}
+    .right-panel input[type="text"]:focus,
+    .right-panel textarea:focus{border-color:#E35205;outline:none;}
+
+    /* 🔸 yellow‑background highlight */
+    .overlay-wrapper{position:relative;}
+    .overlay-wrapper textarea{background:transparent;position:relative;z-index:2;}
+    .overlay-highlights{position:absolute;top:0;left:0;width:100%;height:100%;white-space:pre-wrap;color:transparent;pointer-events:none;overflow:hidden;z-index:1;}
+    .overlay-highlights mark{background:#fff59d;border-radius:3px;color:transparent;font-weight:700;}
+    
+    </style>
 </head>
 <body>
 
@@ -256,13 +278,12 @@
 <div class="replace-tool">
   <h3 class="replace-title">เครื่องมือแก้ไขคำผิด</h3>
   <div class="replace-fields">
-    <label for="wrong-word">แก้ไขคำผิด:</label>
-    <input type="text" id="wrong-word" class="wrong-word" placeholder="คำผิด">
-    <input type="text" id="correct-word" class="correct-word" placeholder="คำที่ถูกต้อง">
-    <button class="replace-action-btn" type="button" onclick="replaceAndLog()">แทนที่</button>
+      <label for="wrong-word">คำผิด:</label>
+      <input type="text" id="wrong-word" class="wrong-word" placeholder="คำผิด">
+      <input type="text" id="correct-word" class="correct-word" placeholder="คำที่ถูกต้อง">
+      <button class="replace-action-btn" type="button" onclick="scanWords()">ค้นหา</button>
   </div>
 </div>
-
 
 
 
@@ -354,8 +375,11 @@
     </div>
   </div>
   
+
+
+
   <script>
-    function autoResize(textarea) {
+     function autoResize(textarea) {
       textarea.style.height = "auto";
       textarea.style.height = (textarea.scrollHeight) + "px";
     }
@@ -376,129 +400,115 @@
         resize(); // เรียกครั้งแรกตอนโหลด
       });
     });
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const form = document.getElementById("uploadForm");
-      const overlay = document.getElementById("loadingOverlay");
-
-      form.addEventListener("submit", function (e) {
-        e.preventDefault(); // ❗️ยกเลิกการส่งแบบเดิม
-
-        overlay.style.display = "flex"; // ✅ แสดง overlay
-
-        const formData = new FormData(form);
-
-        fetch("{{ url_for('fill_project_info') }}", {
-          method: "POST",
-          body: formData
-        })
-        .then(response => {
-          if (response.redirected) {
-            // ✅ ถ้า server redirect → ตามไปเลย
-            window.location.href = response.url;
-          } else {
-            return response.text().then(text => {
-              overlay.style.display = "none"; // ❌ ถ้าไม่ redirect → ปิด overlay
-              alert("เกิดข้อผิดพลาด: " + text);
-            });
-          }
-        })
-        .catch(err => {
-          overlay.style.display = "none";
-          alert("เกิดข้อผิดพลาดระหว่างการส่งข้อมูล");
-          console.error(err);
-        });
-      });
-    });
-
-    function replaceWords() {
-  const wrongInput = document.querySelector('.wrong-word');
-  const correctInput = document.querySelector('.correct-word');
-  const wrong = wrongInput.value.trim();
-  const correct = correctInput.value.trim();
-
-  if (!wrong || !correct) return;
-
-  showLoading();
-
-  setTimeout(() => {
-    const elements = [...document.querySelectorAll('textarea'), ...document.querySelectorAll('input[type="text"]')];
-    elements.forEach((el) => {
-      if (el.value.includes(wrong)) {
-        el.value = el.value.replaceAll(wrong, correct);
-        autoResize(el);
-      }
-    });
-
-    wrongInput.value = '';
-    correctInput.value = '';
-    hideLoading();
-  }, 300);
+    
+    
+    function wrapTextareas(){
+  document.querySelectorAll('textarea').forEach(tx=>{
+    if(tx.parentElement.classList.contains('overlay-wrapper')) return; // already wrapped
+    const wrap=document.createElement('div');wrap.className='overlay-wrapper';
+    tx.parentNode.insertBefore(wrap,tx);
+    wrap.appendChild(tx);
+    const high=document.createElement('div');high.className='overlay-highlights';
+    wrap.insertBefore(high,tx);
+  });
 }
 
-function showLoading() {
-  document.getElementById('loadingOverlay').style.display = 'flex';
+/****************  utils  ****************/
+const PROJECT_ID="{{ existing_project.id if existing_project else session.get('replace_project_id','') }}";
+const escapeHTML=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function updateHighlight(el,regex){
+  const hl=el.parentElement.querySelector('.overlay-highlights');
+  if(!hl) return;
+  hl.innerHTML = regex ? escapeHTML(el.value).replace(regex,m=>`<mark>${m}</mark>`) : '';
 }
-function hideLoading() {
-  document.getElementById('loadingOverlay').style.display = 'none';
-}
+function replaceNth(str,regex,n,repl){let i=0;return str.replace(regex,m=>++i===n?repl:m);} // replace n‑th occurrence only
 
-
-const form = document.querySelector('.upload-form');
-  if (form) {
-    form.addEventListener('submit', function () {
-      document.getElementById('loadingOverlay').style.display = 'flex';
-    });
+// ===== helper to get human‑readable label =====
+function getFieldLabel(el){
+  // case 1: label อยู่ก่อน input/textarea ตรง ๆ
+  if(el.previousElementSibling && el.previousElementSibling.tagName==='LABEL'){
+    return el.previousElementSibling.innerText.trim();
   }
-  
-  function replaceAndLog() {
-  const wrongInput = document.querySelector('.wrong-word');
-  const correctInput = document.querySelector('.correct-word');
-  const wrong = wrongInput.value.trim();
-  const correct = correctInput.value.trim();
-  const projectId = document.getElementById('project-id')?.value || "";
-
-  
-  if (!wrong || !correct) return;
-
-  showLoading();
-
-  const elements = [...document.querySelectorAll('textarea'), ...document.querySelectorAll('input[type="text"]')];
-  elements.forEach((el) => {
-    if (el.value.includes(wrong)) {
-      el.value = el.value.replaceAll(wrong, correct);
-      autoResize(el);
-    }
-  });
-
-  // (1) แทนที่จะเรียก projectId แต่ในโค้ดไม่มีตัวแปร projectId ให้เห็น
-  fetch('/log_correction', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      wrong_word: wrong,       
-      correct_word: correct,
-      project_id: PROJECT_ID  // <--- ตัวแปรนี้อาจจะยังไม่ได้ประกาศไว้
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status === 'ok') {
-   
-    } else {
-      alert('เกิดข้อผิดพลาดในการบันทึก');
-    }
-  })
-  .finally(() => {
-    wrongInput.value = '';
-    correctInput.value = '';
-    hideLoading(); 
-  });
+  // case 2: textarea ถูก wrap → label จะอยู่ก่อน wrapper
+  if(el.parentElement && el.parentElement.previousElementSibling && el.parentElement.previousElementSibling.tagName==='LABEL'){
+    return el.parentElement.previousElementSibling.innerText.trim();
+  }
+  // fallback: ใช้ name หรือ '-'
+  return el.name || '-';
 }
 
-const PROJECT_ID = "{{ existing_project.id if existing_project else session.get('replace_project_id', '') }}";
-  </script>
+/****************  scan & build selectable list  ****************/
+let occurrences=[]; // each {id,label,el,matchIndex,occIdx}
+function scanWords(){
+  const wrong=document.getElementById('wrong-word').value.trim();
+  const correct=document.getElementById('correct-word').value.trim();
+  if(!wrong) return Swal.fire('กรอกคำที่ต้องการค้นหา','','warning');
+  const rgGlobal=new RegExp(wrong,'gi');
+  occurrences=[];
+  document.querySelectorAll('textarea').forEach(el=>updateHighlight(el,null));
+
+  // traverse every input / textarea
+  document.querySelectorAll('textarea,input[type="text"]').forEach(el=>{
+    const txt=el.value;
+    let m,count=0;
+    const rgEach=new RegExp(wrong,'gi');
+    while((m=rgEach.exec(txt))!==null){
+      count++;
+      occurrences.push({
+        id:occurrences.length,
+        label:getFieldLabel(el),
+        el,
+        matchIndex:m.index,
+        occIdx:count // n‑th match within this element
+      });
+    }
+    if(count && el.tagName==='TEXTAREA') updateHighlight(el,rgGlobal);
+  });
+
+  if(occurrences.length===0) return Swal.fire('ไม่พบคำผิด','','info');
+
+  // group by label for nicer list
+  const grouped={};
+  occurrences.forEach(o=>{(grouped[o.label]=grouped[o.label]||[]).push(o);});
+  let html='';
+  Object.entries(grouped).forEach(([lab,arr])=>{
+    html+=`<div style="margin:6px 0 2px"><b>${lab}</b></div>`;
+    arr.forEach(o=>{
+      const start=Math.max(0,o.matchIndex-25);
+      const end=Math.min(o.el.value.length,o.matchIndex+wrong.length+25);
+      const snippet=escapeHTML(o.el.value.slice(start,end)).replace(rgGlobal,m=>`<mark>${m}</mark>`);
+      html+=`<label style="display:block;margin-left:22px;font-size:13px;">`+
+             `<input type="checkbox" class="occ-check" data-id="${o.id}" checked> `+
+             `${(start>0?'…':'')+snippet+(end<o.el.value.length?'…':'')}</label>`;
+    });
+  });
+
+  Swal.fire({
+    title:`พบคำผิด ${occurrences.length} ครั้ง`,
+    html:`<div id="occBox" style="text-align:left;max-height:320px;overflow-y:auto;">${html}</div>`,
+    confirmButtonText:'แทนที่',showCancelButton:true,cancelButtonText:'ยกเลิก',
+    preConfirm:()=>[...document.querySelectorAll('#occBox .occ-check:checked')].map(cb=>+cb.dataset.id)
+  }).then(res=>{if(res.isConfirmed) doReplace(wrong,correct,res.value);});
+}
+
+/****************  replace selected occurrences  ****************/
+function doReplace(wrong,correct,ids){
+  if(!correct) return Swal.fire('กรอกคำที่ถูกต้องก่อนถึงจะแก้ไขได้','','warning');
+  const rg=new RegExp(wrong,'gi');
+  let total=0;
+  ids.forEach(id=>{
+    const occ=occurrences.find(o=>o.id===id);
+    if(!occ) return;
+    occ.el.value = replaceNth(occ.el.value,rg,occ.occIdx,correct);
+    if(occ.el.tagName==='TEXTAREA') updateHighlight(occ.el,null);
+    total++;
+  });
+  Swal.fire('แทนที่แล้ว',`แก้ ${total} ครั้ง`,'success');
+  if(total) fetch('/log_correction',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wrong_word:wrong,correct_word:correct,project_id:PROJECT_ID})}).catch(()=>{});
+  document.getElementById('wrong-word').value='';
+  document.getElementById('correct-word').value='';
+}
+</script>
+</body>
 
 </html>
