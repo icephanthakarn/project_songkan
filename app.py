@@ -842,6 +842,50 @@ def replace_file(project_id):
         temp_thumbnail_path=session.get('temp_thumbnail')
     )
 
+@app.route('/admin/corrections')
+def admin_correction_page():
+    if not is_admin():
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้")
+        return redirect(url_for('index'))
+
+    query = request.args.get('q', '').strip()
+
+    if query:
+        corrections = CorrectionModel.query.filter(
+            (CorrectionModel.original_word.contains(query)) |
+            (CorrectionModel.corrected_word.contains(query))
+        ).order_by(CorrectionModel.created_at.desc()).all()
+    else:
+        corrections = CorrectionModel.query.order_by(CorrectionModel.created_at.desc()).all()
+
+    return render_template('admin_corrections.html', corrections=corrections)
+
+
+@app.route('/admin/correction/<string:correction_id>/delete', methods=['POST'])
+def delete_correction(correction_id):
+    if not is_admin():
+        flash("คุณไม่มีสิทธิ์ลบข้อมูล")
+        return redirect(url_for('index'))
+
+    correction = CorrectionModel.query.get_or_404(correction_id)
+    db.session.delete(correction)
+    db.session.commit()
+    flash("ลบคำผิดเรียบร้อยแล้ว")
+    return redirect(url_for('admin_correction_page'))
+
+
+@app.route('/admin/correction/<string:correction_id>/edit', methods=['GET', 'POST'])
+def edit_correction(correction_id):
+    correction = CorrectionModel.query.get_or_404(correction_id)
+    
+    if request.method == 'POST':
+        correction.original_word = request.form['original_word']
+        correction.corrected_word = request.form['corrected_word']
+        db.session.commit()
+        flash("อัปเดตคำผิดเรียบร้อยแล้ว")
+        return redirect(url_for('admin_correction_page'))
+
+    return render_template('edit_correction.html', correction=correction)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Correction Management</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+</head>
+
+<style>
+  h1{
+    font-size: 22px;
+  }
+  .filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: flex-end;
+  }
+  
+  .filter-item label {
+    display: block;
+    font-weight: bold;
+    color: #ea5c0d;
+    margin-bottom: 6px;
+  }
+  
+  .select-wrapper {
+    position: relative;
+  }
+  
+  .select-wrapper select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    min-width: 180px;
+  }
+  
+  .icon-dropdown {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ea5c0d;
+    pointer-events: none;
+  }
+  
+  .reset-button-container {
+    margin-top: 26px;
+  }
+  
+  .reset-btn {
+    background-color: #ea5c0d;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    font-size: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  th, td {
+    padding: 8px 16px;
+    text-align: left;
+    font-size: 15px;
+    border: 1px solid #ddd;
+  }
+  
+  th {
+    background-color: #fef2ea;
+  }
+  
+  .column-title {
+    font-weight: 600;
+    color: #ea5c0d;
+  }
+  
+  .edit-btn {
+      background-color: #E35205;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0;
+  }
+  
+  </style>
+  
+
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="{{ url_for('index') }}" class="brand">หน้าหลัก</a>
+  
+      {% if user_logged_in %}
+      <div class="profile-wrapper">
+        <div class="profile-btn">
+          <div class="avatar-circle" style="background-color: {{ avatar_color }}">
+            {{ first_letter }}
+          </div>
+          <span class="student-id">{{ student_id }}</span>
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </div>
+  
+        <div class="dropdown-menu">
+          <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+  
+          {% if user_is_admin %}
+            <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
+            <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
+            <a href="{{ url_for('admin_correction_page') }}">Correction Log</a>
+
+          {% endif %}
+          <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="login-btn">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <form method="get" action="{{ url_for('admin_correction_page') }}">
+    <div class="container">
+      <div class="search-container">
+        <input type="text" name="q" placeholder="ค้นหาคำผิด, คำที่ถูกต้อง ได้ที่นี่" value="{{ request.args.get('q', '') }}">
+        <button type="submit" class="search-btn">ค้นหา</button>
+      </div>
+  </form>
+
+      <div class="container">
+        <h1>รายการคำผิดทั้งหมด</h1>
+        <table>
+          <thead>
+            <tr>
+              <th><span class="column-title">คำผิด (Original)</span></th>
+              <th><span class="column-title">คำที่ถูกต้อง (Corrected)</span></th>
+              <th><span class="column-title">ผู้แก้ไข</span></th>
+              <th><span class="column-title">จัดการ</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in corrections %}
+            <tr>
+              <td>{{ item.original_word }}</td>
+              <td>{{ item.corrected_word }}</td>
+              <td>{{ item.student.student_name if item.student else 'Admin' }}</td>
+              <td>
+                <form action="{{ url_for('delete_correction', correction_id=item.id) }}" method="POST" style="display:inline;">
+                  <button type="submit" class="delete-btn" onclick="return confirm('ยืนยันลบคำผิดนี้?')">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+</body>
+</html>
