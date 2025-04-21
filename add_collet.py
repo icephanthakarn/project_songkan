@@ -261,13 +261,13 @@ added_count = 0
 for wrong, correct in corrections_dict.items():
     # ตรวจว่ามีคำนี้อยู่ในฐานข้อมูลหรือยัง
     exists = session.query(CorrectionModel).filter_by(
-        original_word=wrong, corrected_word=correct
+        incorrected_word=wrong, corrected_word=correct
     ).first()
 
     if not exists:
         correction = CorrectionModel(
             id=str(uuid.uuid4()),
-            original_word=wrong,
+            incorrected_word=wrong,
             corrected_word=correct,
             student_id=admin_id,     # ✅ ใส่ admin เป็นคนเพิ่ม
             project_id=None,

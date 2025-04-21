@@ -264,7 +264,11 @@
           {% if user_is_admin %}
             <a href="{{ url_for('admin_page') }}"><i class="fa fa-folder-open"></i> Project List</a>
             <a href="{{ url_for('admin_student_page') }}"><i class="fa fa-users"></i> Student List</a>
-            <a href="{{ url_for('admin_correction_page') }}">Correction Log</a>
+              <!--<a href="{{ url_for('admin_correction_page') }}">Correction Log</a> -->
+
+              <a href="{{ url_for('admin_correction_summary_page') }}">
+                <i class="fa fa-chart-pie"></i> Site-Map
+              </a>
 
           {% endif %}
           <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>

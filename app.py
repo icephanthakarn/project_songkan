@@ -14,7 +14,7 @@ import re
 import shutil
 from ocr_logic import correct_word, process_pdf_to_data
 from flask import jsonify
-
+from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
@@ -759,7 +759,7 @@ def inject_user():
 
 @app.route('/replace', methods=['POST'])
 def replace_word():
-    original = request.form['original_word']
+    original = request.form['incorrected_word']
     corrected = request.form['corrected_word']
     student_id = session['user']['student_id']
 
@@ -768,7 +768,7 @@ def replace_word():
 
     # 👉 บันทึก Log การแก้ไขคำ
     correction = CorrectionModel(
-        original_word=original,
+        incorrected_word=original,
         corrected_word=corrected,
         student_id=student_id,
         project_id=request.form.get('project_id')
@@ -781,23 +781,37 @@ def replace_word():
 @app.route('/log_correction', methods=['POST'])
 def log_correction():
     data = request.get_json()
-    original = data.get('wrong_word')   # รับค่าที่ส่งเข้ามาในฟิลด์ wrong_word
+    original = data.get('wrong_word')
     correct = data.get('correct_word')
-    project_id = data.get('project_id')
+    # ไม่สน project_id แล้ว
+    student_id = session['user']['student_id']
 
     if original and correct:
-        student_id = session['user']['student_id']  # ดึง student_id จาก session
-        log = CorrectionModel(
-            original_word=original,
-            corrected_word=correct,
-            student_id=student_id,
-            project_id=project_id
-        )
-        db.session.add(log)
+        # 🔄 เช็กว่าคำผิดนี้เคยแก้มาก่อนหรือยัง (ไม่สน project แล้ว)
+        existing_log = CorrectionModel.query.filter_by(
+            incorrected_word=original,
+            corrected_word=correct
+        ).first()
+
+        if existing_log:
+            existing_log.count += 1
+            existing_log.last_date = datetime.utcnow()
+        else:
+            log = CorrectionModel(
+                incorrected_word=original,
+                corrected_word=correct,
+                student_id=student_id,
+                count=1,
+                last_date=datetime.utcnow(),
+                created_at=datetime.utcnow()
+            )
+            db.session.add(log)
+
         db.session.commit()
         return jsonify(status='ok')
 
     return {'status': 'error'}, 400
+
 
 @app.route('/replace_file/<project_id>', methods=['POST'])
 def replace_file(project_id):
@@ -852,7 +866,7 @@ def admin_correction_page():
 
     if query:
         corrections = CorrectionModel.query.filter(
-            (CorrectionModel.original_word.contains(query)) |
+            (CorrectionModel.incorrected_word.contains(query)) |
             (CorrectionModel.corrected_word.contains(query))
         ).order_by(CorrectionModel.created_at.desc()).all()
     else:
@@ -879,13 +893,75 @@ def edit_correction(correction_id):
     correction = CorrectionModel.query.get_or_404(correction_id)
     
     if request.method == 'POST':
-        correction.original_word = request.form['original_word']
+        correction.incorrected_word = request.form['incorrected_word']
         correction.corrected_word = request.form['corrected_word']
         db.session.commit()
         flash("อัปเดตคำผิดเรียบร้อยแล้ว")
         return redirect(url_for('admin_correction_page'))
 
     return render_template('edit_correction.html', correction=correction)
+
+
+@app.route('/admin/corrections_summary')
+def admin_correction_summary_page():
+    if not is_admin():
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้")
+        return redirect(url_for('index'))
+
+    sort = request.args.get('sort', 'recent')  # default: คำล่าสุด
+    q = request.args.get('q', '').strip()      # search query
+
+    base_query = db.session.query(
+        CorrectionModel.corrected_word,
+        func.count(CorrectionModel.id).label('total'),
+        func.max(CorrectionModel.last_date).label('latest')
+    ).group_by(CorrectionModel.corrected_word)
+
+    if q:
+        base_query = base_query.filter(CorrectionModel.corrected_word.contains(q))
+
+    if sort == 'count':
+        results = base_query.order_by(func.count(CorrectionModel.id).desc()).all()
+    elif sort == 'word':
+        results = base_query.order_by(CorrectionModel.corrected_word.asc()).all()
+    else:
+        results = base_query.order_by(func.max(CorrectionModel.last_date).desc()).all()
+
+    corrections = []
+    for row in results:
+        wrong_words = db.session.query(CorrectionModel.incorrected_word).filter_by(corrected_word=row.corrected_word).distinct().all()
+        wrong_list = [w[0] for w in wrong_words]
+        corrections.append({
+            'corrected_word': row.corrected_word,
+            'total': row.total,
+            'latest': row.latest,
+            'incorrected_words': wrong_list
+        })
+
+    return render_template('admin_corrections_summary.html',
+                           corrections=corrections,
+                           sort=sort,
+                           q=q)
+
+@app.route('/admin/delete-correction', methods=['POST'])
+def delete_correction_summary():
+    if not is_admin():
+        flash("คุณไม่มีสิทธิ์ลบคำผิด")
+        return redirect(url_for('index'))
+
+    incorrected_word = request.form.get('incorrected_word')
+    corrected_word = request.form.get('corrected_word')
+
+    # ลบคำผิดเฉพาะคำที่ถูกแก้เป็นคำนี้
+    CorrectionModel.query.filter_by(
+        incorrected_word=incorrected_word,
+        corrected_word=corrected_word
+    ).delete()
+
+    db.session.commit()
+    flash(f"ลบคำผิด \"{incorrected_word}\" เรียบร้อยแล้ว")
+    return redirect(url_for('admin_correction_summary_page'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

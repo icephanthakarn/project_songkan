@@ -39,7 +39,7 @@ def correct_word(text):
     try:
         corrections = session.query(CorrectionModel).all()
         for item in corrections:
-            wrong = item.original_word.strip()
+            wrong = item.incorrected_word.strip()
             right = item.corrected_word.strip()
             if wrong and wrong in text:
                 text = text.replace(wrong, right)

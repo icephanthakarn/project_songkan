@@ -1,10 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, desc
 from sqlalchemy.orm import relationship
-import datetime
+
 import re
 import uuid
-
+from datetime import datetime
 db = SQLAlchemy()
 
 def generate_custom_id(prefix, length=6):
@@ -45,8 +45,8 @@ class UserModel(db.Model):
     student_name = Column(String(100))
     faculty = Column(String(100), default='วิทยาศาสตร์')  
     student_major = Column(String(100))
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, onupdate=datetime.now)
     projects = relationship('ProjectModel', secondary='project_student', back_populates='students')
 
 
@@ -66,8 +66,8 @@ class ProjectModel(db.Model):
     advisor = Column(String(255))
     keywords_rel = relationship('KeywordModel', secondary='project_keyword', back_populates='projects')
 
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, onupdate=datetime.now)
 
     created_by = Column(String(10), ForeignKey('users.student_id', name='fk_created_by_user'))
     updated_by = Column(String(10), ForeignKey('users.student_id', name='fk_updated_by_user'))
@@ -114,7 +114,7 @@ class PdfFileModel(db.Model):
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(255), nullable=False)
     thumbnail_path = Column(String(255))
-    uploaded_at = Column(DateTime, default=datetime.datetime.now)
+    uploaded_at = Column(DateTime, default=datetime.now)
 
     # บังคับ One-to-One => unique=True เพื่อป้องกันการซ้ำ
     project_id = Column(String(10), ForeignKey('projects.id'), unique=True)  
@@ -133,16 +133,20 @@ class CorrectionModel(db.Model):
     __tablename__ = 'correction' #เก็บคำผิด
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    original_word = Column(String(255), nullable=False)  # คำที่ผิด
+    incorrected_word = Column(String(255), nullable=False)  # คำที่ผิด
     corrected_word = Column(String(255), nullable=False)  # คำที่ถูก
-    student_id = Column(String(10), ForeignKey('users.student_id'))  # ใครเป็นคนกดแก้
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    student_id = Column(String(10), ForeignKey('users.student_id'))  
+    created_at = Column(DateTime, default=datetime.now)
 
 
     project_id = Column(String(10), ForeignKey('projects.id'))   
+
+    count = Column(db.Integer, default=1)  
+    last_date = Column(DateTime, onupdate=datetime.now)
+
     project = relationship('ProjectModel', backref='corrections')
 
-    student = relationship('UserModel')  # สำหรับ join ข้อมูล user
+    student = relationship('UserModel')  
 
 
 # ตัวเสริม: property นี้สำหรับดึง keywords ของ Project
